@@ -5,6 +5,8 @@
   import { page } from "$app/stores";
   import { tallyFirstChoices } from "$lib/rcv";
   import { onMount } from "svelte";
+  import tippy from "tippy.js";
+  import "tippy.js/dist/tippy.css";
 
   const client = useConvexClient();
   const inviteCode = $derived($page.params.inviteCode.toUpperCase());
@@ -30,9 +32,34 @@
     () => (partyId ? { partyId } : "skip")
   );
 
+  const chatQuery = useQuery(
+    api.chat.listByParty,
+    () => (partyId ? { partyId } : "skip")
+  );
+
+  const reactionsQuery = useQuery(
+    api.chat.listReactionsByParty,
+    () => (partyId ? { partyId } : "skip")
+  );
+
   const guests = $derived(guestsQuery.data ?? []);
   const characters = $derived(charactersQuery.data ?? []);
   const votes = $derived(votesQuery.data ?? []);
+  const chatMessages = $derived(chatQuery.data ?? []);
+  const allReactions = $derived(reactionsQuery.data ?? []);
+
+  // Group reactions by messageId -> emoji -> [authorName, ...]
+  const reactionsByMessage = $derived(() => {
+    const map = new Map<string, Map<string, string[]>>();
+    for (const r of allReactions) {
+      const mid = r.messageId as string;
+      if (!map.has(mid)) map.set(mid, new Map());
+      const byEmoji = map.get(mid)!;
+      if (!byEmoji.has(r.emoji)) byEmoji.set(r.emoji, []);
+      byEmoji.get(r.emoji)!.push(r.authorName);
+    }
+    return map;
+  });
 
   // ── Guest identity ───────────────────────────────────────────────────────────
   let guestName = $state("");
@@ -141,6 +168,131 @@
     } finally {
       voteSaving = false;
     }
+  }
+
+  // ── Chat helpers ─────────────────────────────────────────────────────────────
+  function relativeTime(ms: number): string {
+    const diff = Date.now() - ms;
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (days >= 2) {
+      return new Date(ms).toLocaleString(undefined, {
+        month: "short", day: "numeric", year: "numeric",
+        hour: "numeric", minute: "2-digit",
+      });
+    }
+    if (hours >= 1) return `${hours}h ago`;
+    if (minutes >= 1) return `${minutes}m ago`;
+    if (seconds < 5) return "just now";
+    return `${seconds}s ago`;
+  }
+
+  // ── Chat ─────────────────────────────────────────────────────────────────────
+  let chatInput = $state("");
+  let chatSending = $state(false);
+  let chatInputEl = $state<HTMLInputElement | null>(null);
+
+  // Mention autocomplete
+  let mentionQuery = $state<string | null>(null); // text after @ (null = not in mention mode)
+  let mentionIndex = $state(0);
+
+  const guestNames = $derived(guests.map((g) => g.name));
+
+  const mentionSuggestions = $derived(
+    mentionQuery === null
+      ? []
+      : guestNames.filter((n) => n.toLowerCase().startsWith(mentionQuery!.toLowerCase()))
+  );
+
+  $effect(() => { if (mentionSuggestions.length > 0) mentionIndex = 0; });
+
+  function detectMention(value: string, cursorPos: number) {
+    // Walk backwards from cursor to find an @ with no spaces between
+    const before = value.slice(0, cursorPos);
+    const atIdx = before.lastIndexOf("@");
+    if (atIdx === -1) { mentionQuery = null; return; }
+    const fragment = before.slice(atIdx + 1);
+    if (fragment.includes(" ")) { mentionQuery = null; return; }
+    mentionQuery = fragment;
+  }
+
+  function applyMention(name: string) {
+    if (!chatInputEl) return;
+    const cursor = chatInputEl.selectionStart ?? chatInput.length;
+    const before = chatInput.slice(0, cursor);
+    const after = chatInput.slice(cursor);
+    const atIdx = before.lastIndexOf("@");
+    chatInput = before.slice(0, atIdx) + "@" + name + " " + after;
+    mentionQuery = null;
+    // Restore focus and move cursor after inserted mention
+    const newCursor = atIdx + name.length + 2;
+    requestAnimationFrame(() => {
+      chatInputEl?.focus();
+      chatInputEl?.setSelectionRange(newCursor, newCursor);
+    });
+  }
+
+  function onChatKeydown(e: KeyboardEvent) {
+    if (mentionSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      mentionIndex = (mentionIndex + 1) % mentionSuggestions.length;
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      mentionIndex = (mentionIndex - 1 + mentionSuggestions.length) % mentionSuggestions.length;
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      applyMention(mentionSuggestions[mentionIndex]);
+    } else if (e.key === "Escape") {
+      mentionQuery = null;
+    }
+  }
+
+  async function sendChat() {
+    if (!partyId || !identifiedName || !chatInput.trim()) return;
+    chatSending = true;
+    try {
+      await client.mutation(api.chat.sendMessage, {
+        partyId,
+        authorName: identifiedName,
+        body: chatInput.trim(),
+      });
+      chatInput = "";
+    } finally {
+      chatSending = false;
+    }
+  }
+
+  // ── Reactions ─────────────────────────────────────────────────────────────────
+  const REACTION_EMOJIS = ["👍", "❤️", "😂", "🎉", "😮", "😢", "🔥", "👀"];
+
+  let pickerOpenFor = $state<string | null>(null); // messageId with picker open
+
+  async function toggleReaction(messageId: Id<"chatMessages">, emoji: string) {
+    if (!partyId || !identifiedName) return;
+    await client.mutation(api.chat.toggleReaction, {
+      messageId,
+      partyId,
+      authorName: identifiedName,
+      emoji,
+    });
+  }
+
+  // Svelte action: attaches a Tippy tooltip, updates when content changes
+  function reactionTooltip(node: HTMLElement, content: string) {
+    const instance = tippy(node, {
+      content,
+      allowHTML: false,
+      placement: "top",
+      animation: "shift-away",
+      theme: "party",
+    });
+    return {
+      update(newContent: string) { instance.setContent(newContent); },
+      destroy() { instance.destroy(); },
+    };
   }
 
   // ── Vote standings ───────────────────────────────────────────────────────────
@@ -336,6 +488,102 @@
             {/if}
           </div>
         {/if}
+
+        <!-- Chat -->
+        <div class="chat-section">
+          <h3 class="chat-heading">Chat</h3>
+          <div class="chat-messages">
+            {#if chatMessages.length === 0}
+              <p class="party-muted chat-empty">No messages yet — say something!</p>
+            {:else}
+              {#each chatMessages as msg}
+                {@const msgReactions = reactionsByMessage().get(msg._id as string)}
+                <div class="chat-msg" class:chat-msg-mine={msg.authorName.toLowerCase() === identifiedName?.toLowerCase()}>
+                  <div class="chat-msg-header">
+                    <span class="chat-author">{msg.authorName}</span>
+                    <span class="chat-time">{relativeTime(msg._creationTime)}</span>
+                    {#if identifiedName}
+                      <div class="reaction-picker-wrap">
+                        <button
+                          class="reaction-add-btn"
+                          onclick={() => pickerOpenFor = pickerOpenFor === (msg._id as string) ? null : (msg._id as string)}
+                          aria-label="Add reaction"
+                        >😀</button>
+                        {#if pickerOpenFor === (msg._id as string)}
+                          <div class="reaction-picker">
+                            {#each REACTION_EMOJIS as emoji}
+                              <button
+                                class="reaction-picker-emoji"
+                                onclick={() => { toggleReaction(msg._id, emoji); pickerOpenFor = null; }}
+                              >{emoji}</button>
+                            {/each}
+                          </div>
+                        {/if}
+                      </div>
+                    {/if}
+                  </div>
+                  <p class="chat-body">{msg.body}</p>
+
+                  {#if msgReactions?.size}
+                    <div class="reactions-row">
+                      {#each [...msgReactions.entries()] as [emoji, names]}
+                        {@const iMine = identifiedName ? names.some(n => n.toLowerCase() === identifiedName!.toLowerCase()) : false}
+                        <button
+                          class="reaction-chip"
+                          class:reaction-mine={iMine}
+                          use:reactionTooltip={names.join(", ")}
+                          onclick={() => identifiedName && toggleReaction(msg._id, emoji)}
+                          disabled={!identifiedName}
+                        >{emoji} {names.length}</button>
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+              {/each}
+            {/if}
+          </div>
+          {#if identifiedName}
+            <form class="chat-form" onsubmit={(e) => { e.preventDefault(); if (mentionSuggestions.length === 0) sendChat(); }}>
+              <div class="chat-input-wrap">
+                {#if mentionSuggestions.length > 0}
+                  <ul class="mention-list" role="listbox">
+                    {#each mentionSuggestions as name, i}
+                      <li
+                        class="mention-item"
+                        class:mention-item-active={i === mentionIndex}
+                        role="option"
+                        aria-selected={i === mentionIndex}
+                        onmousedown={(e) => { e.preventDefault(); applyMention(name); }}
+                        onmouseover={() => (mentionIndex = i)}
+                        onfocus={() => (mentionIndex = i)}
+                      >{name}</li>
+                    {/each}
+                  </ul>
+                {/if}
+                <input
+                  bind:this={chatInputEl}
+                  class="party-input chat-input"
+                  type="text"
+                  bind:value={chatInput}
+                  placeholder="Say something… (@ to mention)"
+                  disabled={chatSending}
+                  maxlength={500}
+                  oninput={(e) => detectMention(chatInput, (e.target as HTMLInputElement).selectionStart ?? chatInput.length)}
+                  onkeydown={onChatKeydown}
+                  onclick={(e) => detectMention(chatInput, (e.target as HTMLInputElement).selectionStart ?? chatInput.length)}
+                  onblur={() => setTimeout(() => { mentionQuery = null; }, 150)}
+                />
+              </div>
+              <button
+                class="party-btn party-btn-primary chat-send"
+                type="submit"
+                disabled={chatSending || !chatInput.trim() || mentionSuggestions.length > 0}
+              >Send</button>
+            </form>
+          {:else}
+            <p class="party-muted chat-login-hint">RSVP with your name to join the chat.</p>
+          {/if}
+        </div>
       </section>
 
       <!-- RSVP -->
@@ -953,6 +1201,237 @@
   }
 
   .mobile-nav { display: none; }
+
+  /* Chat */
+  .chat-section {
+    margin-top: 2rem;
+    border-top: 1px solid var(--color-border);
+    padding-top: 1.5rem;
+  }
+
+  .chat-heading {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    color: var(--color-accent);
+    margin: 0 0 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.8rem;
+  }
+
+  .chat-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 280px;
+    overflow-y: auto;
+    margin-bottom: 0.75rem;
+    padding-right: 0.25rem;
+  }
+
+  .chat-empty { margin: 0; }
+
+  .chat-msg {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0.6rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .chat-msg-mine {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg));
+  }
+
+  .chat-msg-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+
+  .chat-author {
+    font-weight: 700;
+    color: var(--color-primary);
+    font-size: 0.82rem;
+    line-height: 1;
+  }
+
+  .chat-msg-mine .chat-author {
+    color: var(--color-accent);
+  }
+
+  .chat-time {
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .chat-body {
+    color: var(--color-text);
+    font-size: 0.9rem;
+    line-height: 1.45;
+    word-break: break-word;
+    margin: 0;
+  }
+
+  .chat-form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .chat-input-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  .chat-input { width: 100%; }
+
+  .mention-list {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    margin: 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.4);
+    z-index: 10;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .mention-item {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: var(--color-text);
+  }
+
+  .mention-item-active {
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+    color: var(--color-primary);
+  }
+
+  .chat-send {
+    flex-shrink: 0;
+    padding: 0.65rem 1rem;
+    align-self: stretch;
+  }
+
+  .chat-login-hint {
+    font-size: 0.85rem;
+    margin: 0;
+    font-style: italic;
+  }
+
+  /* Reactions */
+  .reactions-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.4rem;
+  }
+
+  .reaction-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    padding: 0.18rem 0.55rem;
+    font-size: 0.82rem;
+    cursor: pointer;
+    color: var(--color-text);
+    line-height: 1.4;
+    transition: border-color 0.12s, background 0.12s;
+  }
+
+  .reaction-chip:hover:not(:disabled) {
+    border-color: var(--color-primary);
+  }
+
+  .reaction-chip.reaction-mine {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--color-bg));
+    color: var(--color-primary);
+  }
+
+  .reaction-chip:disabled { cursor: default; }
+
+  .reaction-picker-wrap {
+    position: relative;
+    margin-left: 0.25rem;
+  }
+
+  .reaction-add-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 0.12s;
+    line-height: 1;
+  }
+
+  .reaction-add-btn:hover {
+    opacity: 1;
+  }
+
+  .reaction-picker {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 0.4rem;
+    display: flex;
+    gap: 0.15rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.45);
+    z-index: 20;
+  }
+
+  .reaction-picker-emoji {
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 0.2rem 0.25rem;
+    line-height: 1;
+    transition: background 0.1s, transform 0.1s;
+  }
+
+  .reaction-picker-emoji:hover {
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+    transform: scale(1.2);
+  }
+
+  /* Tippy custom theme */
+  :global(.tippy-box[data-theme~="party"]) {
+    background: var(--color-text);
+    border: none;
+    color: var(--color-bg);
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 6px;
+  }
+
+  :global(.tippy-box[data-theme~="party"] .tippy-arrow) {
+    color: var(--color-text);
+  }
 
   @media (max-width: 600px) {
     .side-nav { display: none; }

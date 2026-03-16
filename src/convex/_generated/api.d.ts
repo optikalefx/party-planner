@@ -9,6 +9,7 @@
  */
 
 import type * as characters from "../characters.js";
+import type * as chat from "../chat.js";
 import type * as generateTheme from "../generateTheme.js";
 import type * as guests from "../guests.js";
 import type * as lib_claude from "../lib/claude.js";
@@ -26,6 +27,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   characters: typeof characters;
+  chat: typeof chat;
   generateTheme: typeof generateTheme;
   guests: typeof guests;
   "lib/claude": typeof lib_claude;

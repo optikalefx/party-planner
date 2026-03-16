@@ -46,4 +46,18 @@ export default defineSchema({
     wantsDetective: v.boolean(),
   }).index("by_party", ["partyId"])
     .index("by_party_guest", ["partyId", "guestName"]),
+
+  chatMessages: defineTable({
+    partyId: v.id("parties"),
+    authorName: v.string(),
+    body: v.string(),
+  }).index("by_party", ["partyId"]),
+
+  chatReactions: defineTable({
+    messageId: v.id("chatMessages"),
+    partyId: v.id("parties"),
+    authorName: v.string(),
+    emoji: v.string(),
+  }).index("by_party", ["partyId"])
+    .index("by_message", ["messageId"]),
 });
