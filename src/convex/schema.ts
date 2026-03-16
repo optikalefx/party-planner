@@ -1,0 +1,49 @@
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+export default defineSchema({
+  parties: defineTable({
+    name: v.string(),
+    date: v.optional(v.string()),
+    time: v.optional(v.string()),
+    location: v.optional(v.string()),
+    food: v.optional(v.string()),
+    drinks: v.optional(v.string()),
+    dress: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    partyType: v.optional(v.string()),
+    inviteCode: v.string(),
+    inviteStorageId: v.optional(v.string()),
+    blindVoting: v.boolean(),
+    theme: v.optional(v.object({
+      prompt: v.optional(v.string()),
+      photoStorageId: v.optional(v.string()),
+      css: v.optional(v.string()),
+      headerHtml: v.optional(v.string()),
+      footerHtml: v.optional(v.string()),
+    })),
+  }).index("by_invite_code", ["inviteCode"]),
+
+  guests: defineTable({
+    partyId: v.id("parties"),
+    name: v.string(),
+    rsvpStatus: v.union(v.literal("yes"), v.literal("no"), v.literal("pending")),
+    plusOne: v.optional(v.string()),
+    assignedCharacterId: v.optional(v.string()), // character ID or "detective"; bypasses voting
+  }).index("by_party", ["partyId"]),
+
+  characters: defineTable({
+    partyId: v.id("parties"),
+    name: v.string(),
+    description: v.string(),
+    order: v.number(),
+  }).index("by_party", ["partyId"]),
+
+  votes: defineTable({
+    partyId: v.id("parties"),
+    guestName: v.string(),
+    rankings: v.array(v.id("characters")),
+    wantsDetective: v.boolean(),
+  }).index("by_party", ["partyId"])
+    .index("by_party_guest", ["partyId", "guestName"]),
+});
