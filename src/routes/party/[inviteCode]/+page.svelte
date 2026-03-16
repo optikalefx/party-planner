@@ -1282,6 +1282,7 @@
     display: flex;
     gap: 0.5rem;
     align-items: center;
+    width: 100%;
   }
 
   .chat-input-wrap {
