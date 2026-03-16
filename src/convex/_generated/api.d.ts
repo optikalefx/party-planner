@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
 import type * as characters from "../characters.js";
 import type * as chat from "../chat.js";
 import type * as generateTheme from "../generateTheme.js";
@@ -26,6 +27,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
   characters: typeof characters;
   chat: typeof chat;
   generateTheme: typeof generateTheme;

@@ -3,7 +3,14 @@
   import { api } from "../../convex/_generated/api";
   import type { Id } from "../../convex/_generated/dataModel";
   import { runRCV } from "$lib/rcv";
+  import { onMount } from "svelte";
+  import { goto } from "$app/navigation";
 
+  onMount(() => {
+    if (sessionStorage.getItem("adminAuthed") !== "1") {
+      goto("/admin/login", { replaceState: true });
+    }
+  });
 
   const client = useConvexClient();
 
