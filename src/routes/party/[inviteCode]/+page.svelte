@@ -1454,7 +1454,7 @@
 
     .mobile-nav-tab {
       flex: 1;
-      padding: 0.75rem 0.25rem 0.85rem;
+      padding: 1rem 0.25rem 1.1rem;
       background: transparent;
       border: none;
       color: var(--color-muted);
