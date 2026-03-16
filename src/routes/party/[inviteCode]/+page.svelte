@@ -203,8 +203,8 @@
     )
   );
 
-  // Mobile nav tab
-  let mobileTab = $state<"details" | "people" | "rsvp" | "characters">("details");
+  // Nav tab (shared between side nav on desktop and bottom nav on mobile)
+  let activeTab = $state<"details" | "people" | "rsvp" | "characters">("details");
 
   const myAssignment = $derived(myGuest?.assignedCharacterId ?? null);
   const myAssignedCharacterName = $derived(() => {
@@ -243,10 +243,19 @@
       {/if}
     </div>
 
+    <div class="party-body">
+
+    <nav class="side-nav">
+      <button class="side-nav-tab" class:active={activeTab === "details"} onclick={() => (activeTab = "details")}>Details</button>
+      <button class="side-nav-tab" class:active={activeTab === "people"} onclick={() => (activeTab = "people")}>People</button>
+      <button class="side-nav-tab" class:active={activeTab === "rsvp"} onclick={() => (activeTab = "rsvp")}>RSVP</button>
+      <button class="side-nav-tab" class:active={activeTab === "characters"} onclick={() => (activeTab = "characters")}>Characters</button>
+    </nav>
+
     <main class="party-main">
 
       <!-- Party Details -->
-      <section class="party-section party-details" class:mobile-hidden={mobileTab !== "details"}>
+      <section class="party-section party-details" class:tab-hidden={activeTab !== "details"}>
         <h2 class="section-title">Details</h2>
         <div class="details-grid">
           {#if party.location}
@@ -289,7 +298,7 @@
       </section>
 
       <!-- Who's Coming -->
-      <section class="party-section party-guests" class:mobile-hidden={mobileTab !== "people"}>
+      <section class="party-section party-guests" class:tab-hidden={activeTab !== "people"}>
         <h2 class="section-title">Who's Coming</h2>
         {#if !guests.length}
           <p class="party-muted">No RSVPs yet — be the first!</p>
@@ -330,7 +339,7 @@
       </section>
 
       <!-- RSVP -->
-      <section class="party-section party-rsvp" class:mobile-hidden={mobileTab !== "rsvp"}>
+      <section class="party-section party-rsvp" class:tab-hidden={activeTab !== "rsvp"}>
         <h2 class="section-title">RSVP</h2>
 
         {#if !identifiedName}
@@ -391,7 +400,7 @@
 
       <!-- Characters & Voting -->
       {#if characters.length > 0}
-        <section class="party-section party-characters" class:mobile-hidden={mobileTab !== "characters"}>
+        <section class="party-section party-characters" class:tab-hidden={activeTab !== "characters"}>
           <h2 class="section-title">Characters</h2>
 
           {#if !identifiedName}
@@ -491,11 +500,13 @@
 
     </main>
 
+    </div><!-- /party-body -->
+
     <nav class="mobile-nav">
-      <button class="mobile-nav-tab" class:active={mobileTab === "details"} onclick={() => (mobileTab = "details")}>Details</button>
-      <button class="mobile-nav-tab" class:active={mobileTab === "people"} onclick={() => (mobileTab = "people")}>People</button>
-      <button class="mobile-nav-tab" class:active={mobileTab === "rsvp"} onclick={() => (mobileTab = "rsvp")}>RSVP</button>
-      <button class="mobile-nav-tab" class:active={mobileTab === "characters"} onclick={() => (mobileTab = "characters")}>Characters</button>
+      <button class="mobile-nav-tab" class:active={activeTab === "details"} onclick={() => (activeTab = "details")}>Details</button>
+      <button class="mobile-nav-tab" class:active={activeTab === "people"} onclick={() => (activeTab = "people")}>People</button>
+      <button class="mobile-nav-tab" class:active={activeTab === "rsvp"} onclick={() => (activeTab = "rsvp")}>RSVP</button>
+      <button class="mobile-nav-tab" class:active={activeTab === "characters"} onclick={() => (activeTab = "characters")}>Characters</button>
     </nav>
 
     <!-- Footer decoration (Claude-generated) -->
@@ -574,15 +585,63 @@
     letter-spacing: 0.05em;
   }
 
+  /* Body layout: side nav + main content */
+  .party-body {
+    display: flex;
+    align-items: flex-start;
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* Side nav (desktop) */
+  .side-nav {
+    width: 148px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 2rem;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 0;
+    gap: 0.15rem;
+  }
+
+  .side-nav-tab {
+    background: transparent;
+    border: none;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0.6rem 1rem;
+    text-align: left;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+    letter-spacing: 0.02em;
+  }
+
+  .side-nav-tab:hover:not(.active) {
+    color: var(--color-text);
+    background: var(--color-surface);
+  }
+
+  .side-nav-tab.active {
+    color: var(--color-primary);
+    font-weight: 600;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  }
+
   /* Main content */
   .party-main {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem 4rem;
+    flex: 1;
+    min-width: 0;
+    padding: 2rem 0 4rem 2rem;
     display: flex;
     flex-direction: column;
     gap: 2rem;
   }
+
+  .tab-hidden { display: none !important; }
 
   .party-section {
     background: var(--color-surface);
@@ -896,12 +955,12 @@
   .mobile-nav { display: none; }
 
   @media (max-width: 600px) {
+    .side-nav { display: none; }
+    .party-body { padding: 0; }
     .party-main { padding: 1.5rem 1rem 5rem; }
     .party-section { padding: 1.25rem; }
     .rsvp-options { flex-direction: column; }
     .character-grid { grid-template-columns: 1fr; }
-
-    .mobile-hidden { display: none !important; }
 
     .mobile-nav {
       display: flex;
