@@ -39,7 +39,6 @@ export async function initAuth(convexUrl: string, convexClient: { setAuth: Funct
   // 1. Exchange OAuth code if present in URL
   const url = new URL(window.location.href);
   const code = url.searchParams.get("code");
-  console.log("[auth] initAuth — code in URL:", !!code);
   if (code) {
     url.searchParams.delete("code");
     window.history.replaceState({}, "", url.pathname + url.search + url.hash);
@@ -47,24 +46,20 @@ export async function initAuth(convexUrl: string, convexClient: { setAuth: Funct
   } else {
     // 2. Restore stored token
     const stored = localStorage.getItem(ns(convexUrl, JWT_KEY));
-    console.log("[auth] stored token present:", !!stored);
     if (stored) auth.token = stored;
   }
 
-  console.log("[auth] after init — token:", auth.token ? "present" : "null");
   auth.isLoading = false;
 
   // 3. Wire token into Convex client
   convexClient.setAuth(
     async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
-      console.log("[auth] fetchToken called — forceRefresh:", forceRefreshToken, "token:", auth.token ? "present" : "null");
       if (forceRefreshToken) {
         return await _refreshToken();
       }
       return auth.token;
     },
     (isAuthenticated: boolean) => {
-      console.log("[auth] onChange — isAuthenticated:", isAuthenticated, "current token:", auth.token ? "present" : "null");
       if (!isAuthenticated) {
         auth.token = null;
       }
@@ -128,12 +123,10 @@ async function _exchangeCode(code: string) {
 
 async function _refreshToken(): Promise<string | null> {
   const refreshToken = localStorage.getItem(ns(_convexUrl, REFRESH_KEY));
-  console.log("[auth] _refreshToken — refreshToken present:", !!refreshToken);
   if (!refreshToken) return null;
   try {
     const httpClient = new ConvexHttpClient(_convexUrl);
     const result = await (httpClient as any).action("auth:signIn", { refreshToken });
-    console.log("[auth] _refreshToken result:", result);
     if (result?.tokens) {
       auth.token = result.tokens.token;
       localStorage.setItem(ns(_convexUrl, JWT_KEY), result.tokens.token);
@@ -141,7 +134,7 @@ async function _refreshToken(): Promise<string | null> {
       return result.tokens.token;
     }
   } catch (e) {
-    console.error("[auth] _refreshToken failed:", e);
+    console.error("[auth] token refresh failed:", e);
   }
   return null;
 }

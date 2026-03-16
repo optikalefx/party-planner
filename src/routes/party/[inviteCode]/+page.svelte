@@ -817,6 +817,13 @@
     line-height: 0;
   }
 
+  .party-header-deco :global(svg),
+  .party-footer-deco :global(svg) {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
   /* Hero */
   .party-hero {
     text-align: center;

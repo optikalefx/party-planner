@@ -53,7 +53,7 @@ The page uses these CSS classes you must style:
 Requirements:
 1. Include @import for 1-2 Google Fonts that perfectly match the theme
 2. Atmospheric and visually striking — match the mood and aesthetic to the party type
-3. The headerHtml and footerHtml should be inline SVG art that matches the theme (can be elaborate)
+3. The headerHtml and footerHtml should be inline SVG art that matches the theme (can be elaborate). SVGs MUST use a viewBox attribute and must NOT have fixed pixel width/height attributes — use width="100%" height="auto" so they scale on all screen sizes including mobile
 4. Style ALL classes listed above to be visually cohesive and beautiful
 5. Ensure readable text despite dramatic styling
 6. Buttons and forms must look great and be clearly usable

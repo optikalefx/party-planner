@@ -8,9 +8,7 @@
   const userQuery = useQuery(api.users.getCurrent, {});
 
   $effect(() => {
-    console.log("[admin] effect — isLoading:", auth.isLoading, "token:", auth.token ? "present" : "null");
     if (!auth.isLoading && !auth.token) {
-      console.log("[admin] redirecting to / — no token");
       goto("/", { replaceState: true });
     }
   });
