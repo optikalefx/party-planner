@@ -311,11 +311,18 @@
   const detectiveCount = $derived(votes.filter((v) => v.wantsDetective).length);
 
   // ── Theme injection ──────────────────────────────────────────────────────────
+  function layeredCss(css: string) {
+    // @import must appear before @layer, so hoist them out
+    const imports: string[] = [];
+    const rest = css.replace(/@import\s+[^;]+;/g, (m) => { imports.push(m); return ""; });
+    return `${imports.join("\n")}\n@layer party-theme { ${rest} }`;
+  }
+
   onMount(() => {
     if (party?.theme?.css) {
       const style = document.createElement("style");
       style.id = "party-theme";
-      style.textContent = party.theme.css;
+      style.textContent = layeredCss(party.theme.css);
       document.head.appendChild(style);
       return () => document.getElementById("party-theme")?.remove();
     }
@@ -326,11 +333,11 @@
     const css = party?.theme?.css;
     const existing = document.getElementById("party-theme");
     if (css && existing) {
-      existing.textContent = css;
+      existing.textContent = layeredCss(css);
     } else if (css && !existing) {
       const style = document.createElement("style");
       style.id = "party-theme";
-      style.textContent = css;
+      style.textContent = layeredCss(css);
       document.head.appendChild(style);
     }
   });
