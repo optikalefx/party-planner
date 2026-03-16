@@ -1,9 +1,6 @@
-import { action } from "./_generated/server";
-import { v } from "convex/values";
+import { convexAuth } from "@convex-dev/auth/server";
+import Google from "@auth/core/providers/google";
 
-export const validateAdmin = action({
-  args: { username: v.string(), password: v.string() },
-  handler: async (_ctx, { username, password }) => {
-    return username === "sean" && password === "clark";
-  },
+export const { auth, signIn, signOut, store } = convexAuth({
+  providers: [Google],
 });

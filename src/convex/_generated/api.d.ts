@@ -13,11 +13,13 @@ import type * as characters from "../characters.js";
 import type * as chat from "../chat.js";
 import type * as generateTheme from "../generateTheme.js";
 import type * as guests from "../guests.js";
+import type * as http from "../http.js";
 import type * as lib_claude from "../lib/claude.js";
 import type * as parseCharacters from "../parseCharacters.js";
 import type * as parseInvite from "../parseInvite.js";
 import type * as parties from "../parties.js";
 import type * as storage from "../storage.js";
+import type * as users from "../users.js";
 import type * as votes from "../votes.js";
 
 import type {
@@ -32,11 +34,13 @@ declare const fullApi: ApiFromModules<{
   chat: typeof chat;
   generateTheme: typeof generateTheme;
   guests: typeof guests;
+  http: typeof http;
   "lib/claude": typeof lib_claude;
   parseCharacters: typeof parseCharacters;
   parseInvite: typeof parseInvite;
   parties: typeof parties;
   storage: typeof storage;
+  users: typeof users;
   votes: typeof votes;
 }>;
 

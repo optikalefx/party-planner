@@ -1,8 +1,12 @@
+import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  ...authTables,
+
   parties: defineTable({
+    userId: v.optional(v.id("users")),
     name: v.string(),
     date: v.optional(v.string()),
     time: v.optional(v.string()),
@@ -22,7 +26,8 @@ export default defineSchema({
       headerHtml: v.optional(v.string()),
       footerHtml: v.optional(v.string()),
     })),
-  }).index("by_invite_code", ["inviteCode"]),
+  }).index("by_invite_code", ["inviteCode"])
+    .index("by_user", ["userId"]),
 
   guests: defineTable({
     partyId: v.id("parties"),

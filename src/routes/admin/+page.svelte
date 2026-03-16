@@ -3,12 +3,15 @@
   import { api } from "../../convex/_generated/api";
   import type { Id } from "../../convex/_generated/dataModel";
   import { runRCV } from "$lib/rcv";
-  import { onMount } from "svelte";
   import { goto } from "$app/navigation";
+  import { auth, signOut } from "$lib/auth.svelte";
+  const userQuery = useQuery(api.users.getCurrent, {});
 
-  onMount(() => {
-    if (sessionStorage.getItem("adminAuthed") !== "1") {
-      goto("/admin/login", { replaceState: true });
+  $effect(() => {
+    console.log("[admin] effect — isLoading:", auth.isLoading, "token:", auth.token ? "present" : "null");
+    if (!auth.isLoading && !auth.token) {
+      console.log("[admin] redirecting to / — no token");
+      goto("/", { replaceState: true });
     }
   });
 
@@ -346,9 +349,15 @@
 <div class="admin">
   <header class="admin-header">
     <h1>🎭 Party Planner Admin</h1>
-    {#if view === "detail"}
-      <button class="btn btn-ghost" onclick={() => (view = "parties")}>← All Parties</button>
-    {/if}
+    <div class="header-actions">
+      {#if view === "detail"}
+        <button class="btn btn-ghost" onclick={() => (view = "parties")}>← All Parties</button>
+      {/if}
+      {#if userQuery.data?.image}
+        <img src={userQuery.data.image} alt="profile" class="avatar" />
+      {/if}
+      <button class="btn btn-ghost btn-signout" onclick={() => signOut(client)}>Sign out</button>
+    </div>
   </header>
 
   {#if status}
@@ -762,6 +771,29 @@
     margin: 0;
     font-size: 1.5rem;
     flex: 1;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .btn-signout {
+    opacity: 0.6;
+    font-size: 0.85rem;
+  }
+
+  .btn-signout:hover {
+    opacity: 1;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #2a2a35;
   }
 
   .flash {
