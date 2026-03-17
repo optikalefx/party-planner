@@ -1,6 +1,7 @@
 <script lang="ts">
   import parchment from '$lib/assets/parchment.jpg';
   import inputTexture from '$lib/assets/input-texture.jpg';
+  import logo from '$lib/assets/logo.png';
   import { useQuery, useConvexClient } from "convex-svelte";
   import { api } from "../../convex/_generated/api";
   import type { Id } from "../../convex/_generated/dataModel";
@@ -346,15 +347,16 @@
 
 <div class="admin" style:--parchment="url({parchment})" style:--input-texture="url({inputTexture})">
   <header class="admin-header">
-    <h1>🎭 Party Planner Admin</h1>
+    <div class="header-logo-wrap"><img src={logo} alt="" class="header-logo" aria-hidden="true" /></div>
+    <h1>Party Planner Admin</h1>
     <div class="header-actions">
       {#if view === "detail"}
         <button class="btn btn-ghost" onclick={() => (view = "parties")}>← All Parties</button>
       {/if}
+      <button class="btn btn-ghost btn-signout" onclick={() => signOut(client)}>Sign out</button>
       {#if userQuery.data?.image}
         <img src={userQuery.data.image} alt="profile" class="avatar" />
       {/if}
-      <button class="btn btn-ghost btn-signout" onclick={() => signOut(client)}>Sign out</button>
     </div>
   </header>
 
@@ -865,6 +867,24 @@
     color: #f0e3b2;
   }
 
+  .header-logo-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    border: 2px solid #d4a020;
+    overflow: hidden;
+    background: #0d2035;
+    flex-shrink: 0;
+  }
+
+  .header-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    scale: 1.08;
+  }
+
   .admin-header h1 {
     margin: 0;
     font-size: 1.3rem;
@@ -920,6 +940,7 @@
     padding: 1.25rem 1.5rem;
     margin-bottom: 1.25rem;
     color: #2a1808;
+    border-radius: 16px;
   }
 
   .section h2 {
@@ -976,6 +997,7 @@
     box-shadow: inset 0 0 0 2px #cc4150;
     overflow: hidden;
     color: #2a1808;
+    border-radius: 16px;
   }
 
   .tab-bar {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { auth, signInWithGoogle } from '$lib/auth.svelte';
+  import logo from '$lib/assets/logo.png';
   $effect(() => {
     if (!auth.isLoading && auth.token) {
       goto('/admin', { replaceState: true });
@@ -21,7 +22,7 @@
   <div class="map-card">
     <div class="card-inner">
       <div class="hero">
-        <div class="emblem">✦ &nbsp; ✦ &nbsp; ✦</div>
+        <div class="logo-wrap"><img src={logo} alt="Party Planner" class="logo" /></div>
         <h1>Party Planner</h1>
         <div class="rule"></div>
         <p class="tagline">Themed parties, mystery characters,<br>and unforgettable guests.</p>
@@ -118,12 +119,23 @@
     width: 100%;
   }
 
-  .emblem {
-    color: #cc4150;
-    font-size: 0.65rem;
-    letter-spacing: 0.7em;
-    text-indent: 0.7em;
-    opacity: 0.65;
+  .logo-wrap {
+    width: 110px;
+    height: 110px;
+    border-radius: 8px;
+    border: 3px solid #d4a020;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    overflow: hidden;
+    background: #0d2035;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    scale: 1.08;
   }
 
   h1 {

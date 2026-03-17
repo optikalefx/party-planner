@@ -1,5 +1,5 @@
 <script lang="ts">
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '$lib/assets/logo.png';
 	import { PUBLIC_CONVEX_URL } from '$env/static/public';
 	import { setupConvex, useConvexClient } from 'convex-svelte';
 	import { initAuth } from '$lib/auth.svelte';
