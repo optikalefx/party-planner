@@ -22,8 +22,8 @@
   <div class="map-card">
     <div class="card-inner">
       <div class="hero">
-        <div class="logo-wrap"><img src={logo} alt="Party Planner" class="logo" /></div>
-        <h1>Party Planner</h1>
+        <div class="logo-wrap"><img src={logo} alt="Mystery Invite" class="logo" /></div>
+        <h1>Mystery Invite</h1>
         <div class="rule"></div>
         <p class="tagline">Themed parties, mystery characters,<br>and unforgettable guests.</p>
         <div class="actions">

@@ -348,7 +348,7 @@
 <div class="admin" style:--parchment="url({parchment})" style:--input-texture="url({inputTexture})">
   <header class="admin-header">
     <div class="header-logo-wrap"><img src={logo} alt="" class="header-logo" aria-hidden="true" /></div>
-    <h1>Party Planner Admin</h1>
+    <h1>Mystery Invite Admin</h1>
     <div class="header-actions">
       {#if view === "detail"}
         <button class="btn btn-ghost" onclick={() => (view = "parties")}>← All Parties</button>
