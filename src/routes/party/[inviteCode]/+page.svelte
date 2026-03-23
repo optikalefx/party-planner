@@ -80,6 +80,7 @@
 
   // ── RSVP ─────────────────────────────────────────────────────────────────────
   let rsvpStatus = $state<"yes" | "no" | "pending">("pending");
+  let phoneNumber = $state("");
   let rsvpSaving = $state(false);
   let rsvpDone = $state(false);
 
@@ -90,6 +91,7 @@
   $effect(() => {
     if (myGuest) {
       rsvpStatus = myGuest.rsvpStatus;
+      phoneNumber = myGuest.phoneNumber ?? "";
       rsvpDone = myGuest.rsvpStatus !== "pending";
     }
   });
@@ -102,6 +104,7 @@
         partyId,
         name: identifiedName,
         rsvpStatus,
+        phoneNumber: phoneNumber.trim() || undefined,
       });
       rsvpDone = true;
     } finally {
@@ -619,6 +622,18 @@
         {:else}
           <div class="rsvp-form">
             <p class="rsvp-greeting">Hi, <strong>{identifiedName}</strong>! <button class="btn-link" onclick={() => { identifiedName = null; guestName = ""; }}>Not you?</button></p>
+
+            <div class="form-group" style="margin-bottom: 1rem;">
+              <label class="party-label" for="phone-number">Phone Number <span style="font-weight: normal; opacity: 0.7;">(optional)</span></label>
+              <input
+                id="phone-number"
+                class="party-input"
+                type="tel"
+                bind:value={phoneNumber}
+                placeholder="+1 (555) 123-4567"
+              />
+              <p class="party-muted" style="font-size: 0.8rem; margin-top: 0.25rem;">For party notifications only. We won't share your number.</p>
+            </div>
 
             <div class="rsvp-options">
               <button

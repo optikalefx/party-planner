@@ -16,8 +16,9 @@ export const upsertRsvp = mutation({
     partyId: v.id("parties"),
     name: v.string(),
     rsvpStatus: v.union(v.literal("yes"), v.literal("no"), v.literal("pending")),
+    phoneNumber: v.optional(v.string()),
   },
-  handler: async (ctx, { partyId, name, rsvpStatus }) => {
+  handler: async (ctx, { partyId, name, rsvpStatus, phoneNumber }) => {
     const existing = await ctx.db
       .query("guests")
       .withIndex("by_party", (q) => q.eq("partyId", partyId))
@@ -25,10 +26,10 @@ export const upsertRsvp = mutation({
       .unique();
 
     if (existing) {
-      await ctx.db.patch(existing._id, { rsvpStatus });
+      await ctx.db.patch(existing._id, { rsvpStatus, phoneNumber });
       return existing._id;
     } else {
-      return await ctx.db.insert("guests", { partyId, name, rsvpStatus });
+      return await ctx.db.insert("guests", { partyId, name, rsvpStatus, phoneNumber });
     }
   },
 });
