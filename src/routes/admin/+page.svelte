@@ -48,7 +48,7 @@
   let parsingInvite = $state(false);
 
   // Guest form
-  let guestForm = $state({ name: "", rsvpStatus: "yes" as "yes" | "no" | "pending", plusOne: "" });
+  let guestForm = $state({ name: "", rsvpStatus: "yes" as "yes" | "no" | "pending" });
 
   // RCV results
   let rcvResults = $state<{ guestName: string; characterId: string }[] | null>(null);
@@ -288,9 +288,8 @@
       partyId: selectedPartyId,
       name: guestForm.name.trim(),
       rsvpStatus: guestForm.rsvpStatus,
-      plusOne: guestForm.plusOne.trim() || undefined,
     });
-    guestForm = { name: "", rsvpStatus: "yes", plusOne: "" };
+    guestForm = { name: "", rsvpStatus: "yes" };
   }
 
   async function removeGuest(id: Id<"guests">) {
@@ -703,7 +702,6 @@
                     <tr>
                       <td class="guest-name-cell">
                         {guest.name}
-                        {#if guest.plusOne}<span class="plus-one">+{guest.plusOne}</span>{/if}
                       </td>
                       <td><span class="badge {guest.rsvpStatus}">{guest.rsvpStatus}</span></td>
                       <td>
@@ -747,10 +745,6 @@
                   <option value="no">No — not attending</option>
                   <option value="pending">Pending</option>
                 </select>
-              </div>
-              <div class="field full">
-                <label>Plus One (optional)</label>
-                <input bind:value={guestForm.plusOne} type="text" placeholder="e.g. John Smith" />
               </div>
             </div>
             <div class="tab-actions">
@@ -1256,13 +1250,6 @@
   }
 
   .guest-name-cell { font-weight: 600; white-space: nowrap; }
-
-  .plus-one {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--on-surface-muted);
-    font-weight: 400;
-  }
 
   .assign-select {
     background: rgba(245, 240, 232, 0.07);

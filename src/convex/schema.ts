@@ -33,7 +33,6 @@ export default defineSchema({
     partyId: v.id("parties"),
     name: v.string(),
     rsvpStatus: v.union(v.literal("yes"), v.literal("no"), v.literal("pending")),
-    plusOne: v.optional(v.string()),
     assignedCharacterId: v.optional(v.string()), // character ID or "detective"; bypasses voting
   }).index("by_party", ["partyId"]),
 

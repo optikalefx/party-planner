@@ -80,7 +80,6 @@
 
   // ── RSVP ─────────────────────────────────────────────────────────────────────
   let rsvpStatus = $state<"yes" | "no" | "pending">("pending");
-  let plusOne = $state("");
   let rsvpSaving = $state(false);
   let rsvpDone = $state(false);
 
@@ -91,7 +90,6 @@
   $effect(() => {
     if (myGuest) {
       rsvpStatus = myGuest.rsvpStatus;
-      plusOne = myGuest.plusOne ?? "";
       rsvpDone = myGuest.rsvpStatus !== "pending";
     }
   });
@@ -104,7 +102,6 @@
         partyId,
         name: identifiedName,
         rsvpStatus,
-        plusOne: plusOne.trim() || undefined,
       });
       rsvpDone = true;
     } finally {
@@ -114,7 +111,6 @@
 
   async function selectRsvpStatus(status: "yes" | "no") {
     rsvpStatus = status;
-    if (status === "no") plusOne = "";
     await submitRsvp();
   }
 
@@ -468,7 +464,7 @@
                 <h3 class="guest-group-label">✓ Coming ({rsvpYes.length})</h3>
                 <div class="guest-chips">
                   {#each rsvpYes as g}
-                    <span class="guest-chip yes">{g.name}{g.plusOne ? ` +${g.plusOne}` : ""}</span>
+                    <span class="guest-chip yes">{g.name}</span>
                   {/each}
                 </div>
               </div>
@@ -631,20 +627,6 @@
                 disabled={rsvpSaving}
               >{rsvpSaving && rsvpStatus === 'no' ? 'Saving…' : '✗ Can\'t make it'}</button>
             </div>
-
-            {#if rsvpStatus === "yes"}
-              <div class="form-group">
-                <label class="party-label" for="plus-one">Bringing a +1? (enter their name)</label>
-                <input
-                  id="plus-one"
-                  class="party-input"
-                  type="text"
-                  bind:value={plusOne}
-                  placeholder="Leave blank if coming solo"
-                  onblur={submitRsvp}
-                />
-              </div>
-            {/if}
 
             {#if rsvpDone}
               <p class="success-note">✓ RSVP saved!</p>
