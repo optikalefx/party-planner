@@ -182,6 +182,11 @@
       <span class="footer-sep">&mdash;</span>
       <span class="footer-tech">Built with SvelteKit, Convex &amp; Claude</span>
     </div>
+    <div class="footer-legal">
+      <a href="/privacy">Privacy Policy</a>
+      <span class="footer-dot">&bull;</span>
+      <a href="/terms">Terms &amp; Conditions</a>
+    </div>
   </footer>
 </div>
 
@@ -671,6 +676,32 @@
 
   .footer-tech {
     font-size: 0.7rem;
+    color: var(--on-surface);
+    opacity: 0.15;
+  }
+
+  .footer-legal {
+    max-width: 600px;
+    margin: 0.75rem auto 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .footer-legal a {
+    font-size: 0.7rem;
+    color: var(--on-surface);
+    opacity: 0.25;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .footer-legal a:hover {
+    opacity: 0.5;
+  }
+
+  .footer-dot {
+    font-size: 0.5rem;
     color: var(--on-surface);
     opacity: 0.15;
   }
