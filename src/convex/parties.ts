@@ -1,5 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
@@ -186,5 +186,92 @@ export const remove = mutation({
     const party = await ctx.db.get(id);
     if (!party || party.userId !== userId) throw new Error("Not authorized");
     await ctx.db.delete(id);
+  },
+});
+
+// ── Party Reminders ──────────────────────────────────────────────────────────
+
+export const sendReminder = internalMutation({
+  args: { partyId: v.id("parties") },
+  handler: async (ctx, { partyId }) => {
+    const party = await ctx.db.get(partyId);
+    if (!party) return;
+
+    const guests = await ctx.db
+      .query("guests")
+      .withIndex("by_party", (q) => q.eq("partyId", partyId))
+      .collect();
+
+    const parts = [party.name];
+    if (party.date) parts.push(`on ${party.date}`);
+    if (party.time) parts.push(`at ${party.time}`);
+    if (party.location) parts.push(`- ${party.location}`);
+
+    const message = `Reminder: ${parts.join(" ")} is coming up! Don't forget to RSVP if you haven't already.`;
+
+    for (const guest of guests) {
+      if (guest.phoneNumber) {
+        await ctx.scheduler.runAfter(0, internal.twilio.sendSms, {
+          to: guest.phoneNumber,
+          body: message,
+        });
+      }
+    }
+
+    // Clear the reminder from the party after sending
+    await ctx.db.patch(partyId, { reminder: undefined });
+  },
+});
+
+export const scheduleReminder = mutation({
+  args: {
+    id: v.id("parties"),
+    daysBefore: v.number(),
+    time: v.string(),
+    scheduledAtMs: v.number(),
+  },
+  handler: async (ctx, { id, daysBefore, time, scheduledAtMs }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const party = await ctx.db.get(id);
+    if (!party || party.userId !== userId) throw new Error("Not authorized");
+
+    // Cancel existing reminder if one is scheduled
+    if (party.reminder) {
+      try {
+        await ctx.scheduler.cancel(party.reminder.scheduledFunctionId);
+      } catch {
+        // Already executed or cancelled
+      }
+    }
+
+    const scheduledFunctionId = await ctx.scheduler.runAt(
+      scheduledAtMs,
+      internal.parties.sendReminder,
+      { partyId: id }
+    );
+
+    await ctx.db.patch(id, {
+      reminder: { scheduledFunctionId, daysBefore, time },
+    });
+  },
+});
+
+export const cancelReminder = mutation({
+  args: { id: v.id("parties") },
+  handler: async (ctx, { id }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const party = await ctx.db.get(id);
+    if (!party || party.userId !== userId) throw new Error("Not authorized");
+
+    if (party.reminder) {
+      try {
+        await ctx.scheduler.cancel(party.reminder.scheduledFunctionId);
+      } catch {
+        // Already executed or cancelled
+      }
+      await ctx.db.patch(id, { reminder: undefined });
+    }
   },
 });

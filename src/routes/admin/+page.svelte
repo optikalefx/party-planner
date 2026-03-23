@@ -50,6 +50,11 @@
   // Guest form
   let guestForm = $state({ name: "", rsvpStatus: "yes" as "yes" | "no" | "pending" });
 
+  // Reminder
+  let reminderDays = $state(3);
+  let reminderTime = $state("20:00");
+  let reminderSaving = $state(false);
+
   // RCV results
   let rcvResults = $state<{ guestName: string; characterId: string }[] | null>(null);
   let locking = $state(false);
@@ -151,6 +156,63 @@
       saving = false;
     }
   }
+
+  function computeReminderMs(): number | null {
+    if (!party?.date) return null;
+    // Parse the party date — try common formats
+    const parsed = new Date(party.date);
+    if (isNaN(parsed.getTime())) return null;
+    // Subtract days
+    parsed.setDate(parsed.getDate() - reminderDays);
+    // Set the time
+    const [hours, minutes] = reminderTime.split(":").map(Number);
+    parsed.setHours(hours, minutes, 0, 0);
+    return parsed.getTime();
+  }
+
+  async function scheduleReminder() {
+    if (!selectedPartyId) return;
+    const scheduledAtMs = computeReminderMs();
+    if (!scheduledAtMs || scheduledAtMs <= Date.now()) {
+      flash("Reminder time is in the past. Choose a future date/time.");
+      return;
+    }
+    reminderSaving = true;
+    try {
+      await client.mutation(api.parties.scheduleReminder, {
+        id: selectedPartyId,
+        daysBefore: reminderDays,
+        time: reminderTime,
+        scheduledAtMs,
+      });
+      flash("Reminder scheduled!");
+    } catch (e) {
+      flash("Error scheduling reminder: " + (e as Error).message);
+    } finally {
+      reminderSaving = false;
+    }
+  }
+
+  async function cancelReminder() {
+    if (!selectedPartyId) return;
+    reminderSaving = true;
+    try {
+      await client.mutation(api.parties.cancelReminder, { id: selectedPartyId });
+      flash("Reminder cancelled.");
+    } catch (e) {
+      flash("Error cancelling reminder: " + (e as Error).message);
+    } finally {
+      reminderSaving = false;
+    }
+  }
+
+  // Load reminder settings when party changes
+  $effect(() => {
+    if (party?.reminder) {
+      reminderDays = party.reminder.daysBefore;
+      reminderTime = party.reminder.time;
+    }
+  });
 
   async function toggleBlindVoting() {
     if (!selectedPartyId || !party) return;
@@ -527,6 +589,56 @@
                 >Copy</button>
               </div>
             {/if}
+          </div>
+
+          <!-- Party Reminder -->
+          <div class="form-section">
+            <h3 class="form-section-title">Party Reminder</h3>
+            <p class="form-hint">Schedule an SMS reminder for all guests who provided a phone number.</p>
+
+            {#if party?.reminder}
+              <div class="reminder-active">
+                <span class="reminder-badge">Reminder scheduled: {party.reminder.daysBefore} day{party.reminder.daysBefore === 1 ? "" : "s"} before at {party.reminder.time}</span>
+                <button class="btn btn-danger" onclick={cancelReminder} disabled={reminderSaving}>
+                  {reminderSaving ? "Cancelling..." : "Cancel Reminder"}
+                </button>
+              </div>
+            {/if}
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="reminder-days">Days before party</label>
+                <input
+                  id="reminder-days"
+                  type="number"
+                  min="1"
+                  max="30"
+                  bind:value={reminderDays}
+                />
+              </div>
+              <div class="field">
+                <label for="reminder-time">Time to send</label>
+                <input
+                  id="reminder-time"
+                  type="time"
+                  bind:value={reminderTime}
+                />
+              </div>
+            </div>
+
+            {#if !party?.date}
+              <p class="form-hint" style="color: var(--error, #e57373);">Set a party date above before scheduling a reminder.</p>
+            {/if}
+
+            <div class="tab-actions">
+              <button
+                class="btn btn-primary"
+                onclick={scheduleReminder}
+                disabled={!party?.date || reminderSaving}
+              >
+                {reminderSaving ? "Scheduling..." : party?.reminder ? "Reschedule Reminder" : "Schedule Reminder"}
+              </button>
+            </div>
           </div>
         </div>
       {/if}
@@ -1154,6 +1266,43 @@
     color: var(--on-surface-muted);
   }
   .invite-link a { color: var(--secondary-light); }
+
+  /* ── Reminder ── */
+  .reminder-active {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .reminder-badge {
+    font-size: 0.85rem;
+    color: var(--secondary-light);
+    background: rgba(201, 169, 110, 0.1);
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.125rem;
+    border-left: 2px solid var(--secondary);
+  }
+
+  input[type="number"],
+  input[type="time"] {
+    background: rgba(245, 240, 232, 0.07);
+    border: 1px solid rgba(201, 169, 110, 0.15);
+    border-radius: 2px;
+    padding: 0.65rem 0.75rem;
+    color: var(--on-surface);
+    font-size: 0.9rem;
+    font-family: 'Inter', system-ui, sans-serif;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  input[type="number"]:focus,
+  input[type="time"]:focus {
+    outline: none;
+    background: rgba(245, 240, 232, 0.1);
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 1px rgba(201, 169, 110, 0.15);
+  }
 
   /* ── Buttons ── */
   .btn {

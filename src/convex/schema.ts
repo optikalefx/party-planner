@@ -27,6 +27,11 @@ export default defineSchema({
       headerHtml: v.optional(v.string()),
       footerHtml: v.optional(v.string()),
     })),
+    reminder: v.optional(v.object({
+      scheduledFunctionId: v.id("_scheduled_functions"),
+      daysBefore: v.number(),
+      time: v.string(),
+    })),
   }).index("by_invite_code", ["inviteCode"])
     .index("by_user", ["userId"]),
 
