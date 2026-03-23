@@ -50,7 +50,7 @@
   // Guest form
   let guestForm = $state({ name: "", rsvpStatus: "yes" as "yes" | "no" | "pending" });
 
-  // Reminder
+  // Reminder (defaults: 3 days before at 8pm)
   let reminderDays = $state(3);
   let reminderTime = $state("20:00");
   let reminderSaving = $state(false);
@@ -159,22 +159,23 @@
 
   function computeReminderMs(): number | null {
     if (!party?.date) return null;
-    // Parse the party date — try common formats
-    const parsed = new Date(party.date);
-    if (isNaN(parsed.getTime())) return null;
-    // Subtract days
-    parsed.setDate(parsed.getDate() - reminderDays);
-    // Set the time
+    const partyDate = new Date(party.date + "T00:00:00");
+    if (isNaN(partyDate.getTime())) return null;
+    partyDate.setDate(partyDate.getDate() - reminderDays);
     const [hours, minutes] = reminderTime.split(":").map(Number);
-    parsed.setHours(hours, minutes, 0, 0);
-    return parsed.getTime();
+    partyDate.setHours(hours, minutes, 0, 0);
+    return partyDate.getTime();
   }
 
   async function scheduleReminder() {
     if (!selectedPartyId) return;
     const scheduledAtMs = computeReminderMs();
-    if (!scheduledAtMs || scheduledAtMs <= Date.now()) {
-      flash("Reminder time is in the past. Choose a future date/time.");
+    if (!scheduledAtMs) {
+      flash("Set a party date before scheduling a reminder.");
+      return;
+    }
+    if (scheduledAtMs <= Date.now()) {
+      flash("Reminder time is in the past. Adjust the days or time.");
       return;
     }
     reminderSaving = true;
@@ -546,7 +547,7 @@
               </div>
               <div class="field">
                 <label>Date</label>
-                <input bind:value={form.date} type="text" placeholder="Saturday April 18th" />
+                <input bind:value={form.date} type="date" />
               </div>
               <div class="field">
                 <label>Time</label>
@@ -822,6 +823,7 @@
               <table class="guest-table">
                 <colgroup>
                   <col class="col-name" />
+                  <col class="col-phone" />
                   <col class="col-rsvp" />
                   <col class="col-char" />
                   <col class="col-action" />
@@ -829,6 +831,7 @@
                 <thead>
                   <tr>
                     <th>Name</th>
+                    <th>Phone</th>
                     <th>RSVP</th>
                     <th>Character</th>
                     <th></th>
@@ -839,6 +842,21 @@
                     <tr>
                       <td class="guest-name-cell">
                         {guest.name}
+                      </td>
+                      <td>
+                        <input
+                          class="phone-input"
+                          type="tel"
+                          value={guest.phoneNumber ?? ""}
+                          placeholder="—"
+                          onchange={(e) => {
+                            const val = (e.target as HTMLInputElement).value.trim();
+                            client.mutation(api.guests.updatePhone, {
+                              id: guest._id,
+                              phoneNumber: val || undefined,
+                            });
+                          }}
+                        />
                       </td>
                       <td><span class="badge {guest.rsvpStatus}">{guest.rsvpStatus}</span></td>
                       <td>
@@ -1284,7 +1302,8 @@
   }
 
   input[type="number"],
-  input[type="time"] {
+  input[type="time"],
+  input[type="date"] {
     background: rgba(245, 240, 232, 0.07);
     border: 1px solid rgba(201, 169, 110, 0.15);
     border-radius: 2px;
@@ -1297,7 +1316,8 @@
     box-sizing: border-box;
   }
   input[type="number"]:focus,
-  input[type="time"]:focus {
+  input[type="time"]:focus,
+  input[type="date"]:focus {
     outline: none;
     background: rgba(245, 240, 232, 0.1);
     border-color: var(--secondary);
@@ -1437,8 +1457,9 @@
   .guest-table thead th:last-child { padding-right: 0; text-align: center; }
 
   .guest-table col.col-name { width: auto; }
+  .guest-table col.col-phone { width: 140px; }
   .guest-table col.col-rsvp { width: 52px; }
-  .guest-table col.col-char { width: 45%; }
+  .guest-table col.col-char { width: 35%; }
   .guest-table col.col-action { width: 32px; }
 
   .guest-table tbody td {
@@ -1458,6 +1479,24 @@
   }
 
   .guest-name-cell { font-weight: 600; white-space: nowrap; }
+
+  .phone-input {
+    background: transparent;
+    border: 1px solid rgba(201, 169, 110, 0.1);
+    border-radius: 2px;
+    padding: 0.35rem 0.5rem;
+    color: var(--on-surface);
+    font-size: 0.8rem;
+    font-family: 'Inter', system-ui, sans-serif;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .phone-input:focus {
+    outline: none;
+    border-color: var(--secondary);
+    background: rgba(245, 240, 232, 0.07);
+  }
+  .phone-input::placeholder { color: var(--on-surface-faint); }
 
   .assign-select {
     background: rgba(245, 240, 232, 0.07);

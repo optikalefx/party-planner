@@ -71,4 +71,13 @@ export default defineSchema({
     emoji: v.string(),
   }).index("by_party", ["partyId"])
     .index("by_message", ["messageId"]),
+
+  smsMessages: defineTable({
+    to: v.string(),
+    body: v.string(),
+    status: v.string(),
+    twilioSid: v.optional(v.string()),
+    twilioError: v.optional(v.string()),
+    twilioErrorCode: v.optional(v.string()),
+  }),
 });

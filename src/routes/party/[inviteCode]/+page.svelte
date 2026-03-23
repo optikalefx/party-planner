@@ -11,6 +11,12 @@
   const client = useConvexClient();
   const inviteCode = $derived($page.params.inviteCode.toUpperCase());
 
+  function formatDate(dateStr: string): string {
+    const d = new Date(dateStr + "T00:00:00");
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  }
+
   // ── Queries ──────────────────────────────────────────────────────────────────
   const partyQuery = useQuery(api.parties.getByInviteCode, () => ({ inviteCode }));
 
@@ -402,7 +408,7 @@
     <div class="party-hero">
       <h1 class="party-title">{party.name}</h1>
       {#if party.date || party.time}
-        <p class="party-subtitle">{party.date ?? ""}{party.date && party.time ? " · " : ""}{party.time ?? ""}</p>
+        <p class="party-subtitle">{party.date ? formatDate(party.date) : ""}{party.date && party.time ? " · " : ""}{party.time ?? ""}</p>
       {/if}
     </div>
 
@@ -430,7 +436,7 @@
           {#if party.time}
             <div class="detail-row">
               <span class="detail-label">🕗 When</span>
-              <span>{party.time}{party.date ? `, ${party.date}` : ""}</span>
+              <span>{party.time}{party.date ? `, ${formatDate(party.date)}` : ""}</span>
             </div>
           {/if}
           {#if party.food}

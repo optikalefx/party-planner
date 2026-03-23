@@ -74,22 +74,13 @@ export const sendMessage = mutation({
 
     const guestsWithPhone = guests.filter((g) => g.phoneNumber);
 
-    // Extract @mentions from the message
-    const mentionPattern = /@([\w\s]+?)(?=\s@|\s[^@]|$)/g;
-    const mentionedNames: string[] = [];
-    let match;
-    while ((match = mentionPattern.exec(trimmed)) !== null) {
-      mentionedNames.push(match[1].trim().toLowerCase());
-    }
+    // Match @mentions against known guest names
+    const lowerBody = trimmed.toLowerCase();
+    const mentionedGuests = guestsWithPhone.filter((g) =>
+      lowerBody.includes("@" + g.name.toLowerCase())
+    );
 
-    // Find mentioned guests
-    const mentionedGuests = mentionedNames.length > 0
-      ? guestsWithPhone.filter((g) =>
-          mentionedNames.some((m) => g.name.toLowerCase() === m)
-        )
-      : [];
-
-    if (mentionedNames.length > 0) {
+    if (mentionedGuests.length > 0) {
       // Only notify mentioned guests
       for (const guest of mentionedGuests) {
         if (guest.name.toLowerCase() === authorName.toLowerCase()) continue;

@@ -41,6 +41,16 @@ export const remove = mutation({
   },
 });
 
+export const updatePhone = mutation({
+  args: {
+    id: v.id("guests"),
+    phoneNumber: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, phoneNumber }) => {
+    await ctx.db.patch(id, { phoneNumber });
+  },
+});
+
 export const assignGuest = mutation({
   args: {
     id: v.id("guests"),
