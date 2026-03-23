@@ -1,5 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
 function generateInviteCode(): string {
@@ -124,10 +125,28 @@ export const lockCharacters = mutation({
 
     const guestByName = new Map(guests.map((g) => [g.name.toLowerCase(), g]));
 
+    // Fetch characters for name lookup
+    const characters = await ctx.db
+      .query("characters")
+      .withIndex("by_party", (q) => q.eq("partyId", id))
+      .collect();
+    const charById = new Map(characters.map((c) => [c._id.toString(), c.name]));
+
     for (const { guestName, characterId } of assignments) {
       const guest = guestByName.get(guestName.toLowerCase());
       if (guest && characterId !== "unassigned") {
         await ctx.db.patch(guest._id, { assignedCharacterId: characterId });
+
+        // Notify guest of their character assignment via SMS
+        if (guest.phoneNumber) {
+          const charName = characterId === "detective"
+            ? "the Detective"
+            : charById.get(characterId) ?? "your character";
+          await ctx.scheduler.runAfter(0, internal.twilio.sendSms, {
+            to: guest.phoneNumber,
+            body: `Your character for ${party.name} has been revealed! You are ${charName}. Check the party page for details.`,
+          });
+        }
       }
     }
 
