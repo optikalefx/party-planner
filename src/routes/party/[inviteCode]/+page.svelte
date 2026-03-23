@@ -367,6 +367,11 @@
     if (myAssignment === "detective") return "🕵️ The Detective";
     return characters.find((c) => c._id === myAssignment)?.name ?? null;
   });
+  const myAssignedCharacter = $derived(
+    myAssignment && myAssignment !== "detective"
+      ? characters.find((c) => c._id === myAssignment) ?? null
+      : null
+  );
 </script>
 
 <svelte:head>
@@ -640,23 +645,56 @@
         <section class="party-section party-characters" class:tab-hidden={activeTab !== "characters"}>
           <h2 class="section-title">Characters</h2>
 
-          {#if !identifiedName}
-            <p class="rsvp-to-vote">Please RSVP before voting on a character</p>
-          {:else if myAssignment}
-            <div class="assigned-notice">
-              <span class="assigned-icon">⚡</span>
-              <div>
-                <strong>You've been assigned a character!</strong>
-                <p>You're playing <strong>{myAssignedCharacterName()}</strong>. No need to vote.</p>
+          {#if party.charactersLocked}
+            <!-- ── Locked: Reveal Mode ─────────────────────────────────── -->
+            {#if identifiedName && myAssignment}
+              <div class="character-reveal">
+                {#if myAssignment === "detective"}
+                  <div class="reveal-role">You are the Detective</div>
+                  <p class="reveal-desc">You'll be observing and solving the mystery — no character to play, just your wits!</p>
+                {:else if myAssignedCharacter}
+                  <div class="reveal-role">You are <strong>{myAssignedCharacter.name}</strong></div>
+                  <p class="reveal-desc">{myAssignedCharacter.description}</p>
+                {/if}
               </div>
+            {:else if identifiedName}
+              <p class="party-muted">Characters have been assigned! Check with the host if you don't see yours.</p>
+            {:else}
+              <p class="rsvp-to-vote">Please RSVP to see your character assignment.</p>
+            {/if}
+
+            <h3 class="cast-list-title">The Cast</h3>
+            <div class="character-grid">
+              {#each characters as char}
+                {@const assigneeName = assignedCharacterMap.get(char._id as string)}
+                {@const isMyChar = myAssignment === char._id}
+                <div class="party-card character-card {isMyChar ? 'selected' : ''}">
+                  <h3 class="character-name">{char.name}</h3>
+                  <p class="character-desc">{char.description}</p>
+                  {#if assigneeName}
+                    <p class="char-assignee">Played by: <strong>{assigneeName}</strong></p>
+                  {/if}
+                </div>
+              {/each}
             </div>
           {:else}
-            <p class="party-muted">
-              Read the characters below, then vote for up to <strong>3</strong> you'd like to play — rank them in order of preference.
-            </p>
-          {/if}
+            <!-- ── Unlocked: Voting Mode ───────────────────────────────── -->
+            {#if !identifiedName}
+              <p class="rsvp-to-vote">Please RSVP before voting on a character</p>
+            {:else if myAssignment}
+              <div class="assigned-notice">
+                <span class="assigned-icon">⚡</span>
+                <div>
+                  <strong>You've been assigned a character!</strong>
+                  <p>You're playing <strong>{myAssignedCharacterName()}</strong>. No need to vote.</p>
+                </div>
+              </div>
+            {:else}
+              <p class="party-muted">
+                Read the characters below, then vote for up to <strong>3</strong> you'd like to play — rank them in order of preference.
+              </p>
+            {/if}
 
-          {#if characters.length > 0}
             <div class="character-grid">
               {#each characters as char}
                 {@const isAssigned = assignedCharacterIds.has(char._id as string)}
@@ -690,47 +728,47 @@
                 </div>
               {/each}
             </div>
-          {/if}
 
-          {#if !myAssignment}
-            {#if identifiedName}
-              <div class="vote-actions">
-                <label class="detective-toggle">
-                  <input
-                    type="checkbox"
-                    bind:checked={wantsDetective}
-                    onchange={() => { if (wantsDetective) rankings = []; voteDone = false; }}
-                  />
-                  I'd prefer to be a detective (non-acting role)
-                </label>
+            {#if !myAssignment}
+              {#if identifiedName}
+                <div class="vote-actions">
+                  <label class="detective-toggle">
+                    <input
+                      type="checkbox"
+                      bind:checked={wantsDetective}
+                      onchange={() => { if (wantsDetective) rankings = []; voteDone = false; }}
+                    />
+                    I'd prefer to be a detective (non-acting role)
+                  </label>
 
-                {#if !wantsDetective}
-                  <p class="vote-hint">
-                    {#if rankings.length === 0}
-                      Click characters above to rank your top 3 choices
-                    {:else}
-                      Selected: {rankings.map((id) => characters.find((c) => c._id === id)?.name).join(" → ")}
-                    {/if}
-                  </p>
-                {/if}
+                  {#if !wantsDetective}
+                    <p class="vote-hint">
+                      {#if rankings.length === 0}
+                        Click characters above to rank your top 3 choices
+                      {:else}
+                        Selected: {rankings.map((id) => characters.find((c) => c._id === id)?.name).join(" → ")}
+                      {/if}
+                    </p>
+                  {/if}
 
-                <button
-                  class="party-btn party-btn-primary"
-                  onclick={submitVote}
-                  disabled={voteSaving || (!wantsDetective && rankings.length === 0)}
-                >
-                  {voteSaving ? "Saving…" : voteDone ? "Update Vote" : "Submit Vote"}
-                </button>
+                  <button
+                    class="party-btn party-btn-primary"
+                    onclick={submitVote}
+                    disabled={voteSaving || (!wantsDetective && rankings.length === 0)}
+                  >
+                    {voteSaving ? "Saving…" : voteDone ? "Update Vote" : "Submit Vote"}
+                  </button>
 
-                {#if voteDone}
-                  <p class="success-note">✓ Vote saved!</p>
-                {/if}
-              </div>
+                  {#if voteDone}
+                    <p class="success-note">✓ Vote saved!</p>
+                  {/if}
+                </div>
+              {/if}
             {/if}
-          {/if}
 
-          {#if !party.blindVoting && detectiveCount > 0}
-            <p class="detective-tally">🕵️ {detectiveCount} guest{detectiveCount === 1 ? "" : "s"} want to be the detective</p>
+            {#if !party.blindVoting && detectiveCount > 0}
+              <p class="detective-tally">🕵️ {detectiveCount} guest{detectiveCount === 1 ? "" : "s"} want to be the detective</p>
+            {/if}
           {/if}
         </section>
       {/if}
@@ -1069,6 +1107,36 @@
 
   .assigned-icon { font-size: 1.4rem; flex-shrink: 0; }
   .assigned-notice p { margin: 0.25rem 0 0; color: var(--color-muted); font-size: 0.95rem; }
+
+  /* Character reveal (locked mode) */
+  .character-reveal {
+    text-align: center;
+    padding: 2rem 1.5rem;
+    margin-bottom: 1.5rem;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    border-radius: 12px;
+  }
+  .reveal-role {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: var(--color-heading);
+  }
+  .reveal-desc {
+    color: var(--color-muted);
+    font-size: 1rem;
+    line-height: 1.5;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  .cast-list-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+    margin-bottom: 0.75rem;
+  }
 
   /* Character grid */
   .character-grid {

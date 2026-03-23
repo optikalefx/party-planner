@@ -102,6 +102,63 @@ export const updateTheme = mutation({
   },
 });
 
+export const lockCharacters = mutation({
+  args: {
+    id: v.id("parties"),
+    assignments: v.array(v.object({
+      guestName: v.string(),
+      characterId: v.string(),
+    })),
+  },
+  handler: async (ctx, { id, assignments }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const party = await ctx.db.get(id);
+    if (!party || party.userId !== userId) throw new Error("Not authorized");
+
+    // Save each assignment to the corresponding guest record
+    const guests = await ctx.db
+      .query("guests")
+      .withIndex("by_party", (q) => q.eq("partyId", id))
+      .collect();
+
+    const guestByName = new Map(guests.map((g) => [g.name.toLowerCase(), g]));
+
+    for (const { guestName, characterId } of assignments) {
+      const guest = guestByName.get(guestName.toLowerCase());
+      if (guest && characterId !== "unassigned") {
+        await ctx.db.patch(guest._id, { assignedCharacterId: characterId });
+      }
+    }
+
+    await ctx.db.patch(id, { charactersLocked: true });
+  },
+});
+
+export const unlockCharacters = mutation({
+  args: { id: v.id("parties") },
+  handler: async (ctx, { id }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const party = await ctx.db.get(id);
+    if (!party || party.userId !== userId) throw new Error("Not authorized");
+
+    // Clear all guest assignments
+    const guests = await ctx.db
+      .query("guests")
+      .withIndex("by_party", (q) => q.eq("partyId", id))
+      .collect();
+
+    for (const guest of guests) {
+      if (guest.assignedCharacterId) {
+        await ctx.db.patch(guest._id, { assignedCharacterId: undefined });
+      }
+    }
+
+    await ctx.db.patch(id, { charactersLocked: false });
+  },
+});
+
 export const remove = mutation({
   args: { id: v.id("parties") },
   handler: async (ctx, { id }) => {

@@ -52,6 +52,7 @@
 
   // RCV results
   let rcvResults = $state<{ guestName: string; characterId: string }[] | null>(null);
+  let locking = $state(false);
 
   // ── Queries ──────────────────────────────────────────────────────────────────
   const partiesQuery = useQuery(api.parties.list, {});
@@ -331,6 +332,30 @@
     if (id === "detective") return "🕵️ Detective";
     if (id === "unassigned") return "⚠️ Unassigned";
     return characters.find((c) => c._id === id)?.name ?? id;
+  }
+
+  async function lockInCharacters() {
+    if (!rcvResults || !selectedPartyId) return;
+    locking = true;
+    try {
+      await client.mutation(api.parties.lockCharacters, {
+        id: selectedPartyId,
+        assignments: rcvResults,
+      });
+    } finally {
+      locking = false;
+    }
+  }
+
+  async function unlockCharacters() {
+    if (!selectedPartyId) return;
+    locking = true;
+    try {
+      await client.mutation(api.parties.unlockCharacters, { id: selectedPartyId });
+      rcvResults = null;
+    } finally {
+      locking = false;
+    }
   }
 
   const partyUrl = $derived(
@@ -779,23 +804,47 @@
                 {/each}
               </div>
 
-              <div class="tab-actions">
-                <button class="btn btn-primary" onclick={computeRCV}>
-                  Run Character Assignment (RCV)
-                </button>
-              </div>
-
-              {#if rcvResults}
-                <div class="rcv-results">
-                  <h3>Assignments</h3>
-                  {#each rcvResults as result}
+              {#if party?.charactersLocked}
+                <div class="rcv-results locked">
+                  <h3>Characters Locked In</h3>
+                  <p class="muted">Guests can now see their assigned characters.</p>
+                  {#each guests.filter((g) => g.assignedCharacterId) as guest}
                     <div class="rcv-row">
-                      <span>{result.guestName}</span>
+                      <span>{guest.name}</span>
                       <span class="arrow">→</span>
-                      <strong>{charNameById(result.characterId)}</strong>
+                      <strong>{charNameById(guest.assignedCharacterId!)}</strong>
                     </div>
                   {/each}
+                  <div class="tab-actions">
+                    <button class="btn btn-danger" onclick={unlockCharacters} disabled={locking}>
+                      {locking ? "Unlocking…" : "Unlock Characters"}
+                    </button>
+                  </div>
                 </div>
+              {:else}
+                <div class="tab-actions">
+                  <button class="btn btn-primary" onclick={computeRCV}>
+                    Run Character Assignment (RCV)
+                  </button>
+                </div>
+
+                {#if rcvResults}
+                  <div class="rcv-results">
+                    <h3>Assignments</h3>
+                    {#each rcvResults as result}
+                      <div class="rcv-row">
+                        <span>{result.guestName}</span>
+                        <span class="arrow">→</span>
+                        <strong>{charNameById(result.characterId)}</strong>
+                      </div>
+                    {/each}
+                    <div class="tab-actions">
+                      <button class="btn btn-success" onclick={lockInCharacters} disabled={locking}>
+                        {locking ? "Locking…" : "Lock In & Reveal to Guests"}
+                      </button>
+                    </div>
+                  </div>
+                {/if}
               {/if}
             {:else}
               <p class="muted">No votes yet. Guests can vote from the party page.</p>
@@ -1149,6 +1198,16 @@
 
   .btn-danger { background: transparent; color: var(--primary-light); }
   .btn-danger:hover:not(:disabled) { color: #ff6b7a; }
+
+  .btn-success {
+    background: linear-gradient(135deg, #2e7d32, #43a047);
+    color: #fff;
+  }
+  .btn-success:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+
+  .rcv-results.locked {
+    border-left-color: #43a047;
+  }
 
   .btn.tiny { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
   .btn-row { display: flex; gap: 0.5rem; }

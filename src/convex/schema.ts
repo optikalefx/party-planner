@@ -19,6 +19,7 @@ export default defineSchema({
     inviteCode: v.string(),
     inviteStorageId: v.optional(v.string()),
     blindVoting: v.boolean(),
+    charactersLocked: v.optional(v.boolean()),
     theme: v.optional(v.object({
       prompt: v.optional(v.string()),
       photoStorageId: v.optional(v.string()),
