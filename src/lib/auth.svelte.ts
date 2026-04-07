@@ -75,7 +75,7 @@ export async function signInWithGoogle() {
   const httpClient = new ConvexHttpClient(_convexUrl);
   const result = await (httpClient as any).action("auth:signIn", {
     provider: "google",
-    params: {},
+    params: { redirectTo: window.location.origin },
     verifier: verifier ?? undefined,
   });
 
