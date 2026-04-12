@@ -15,7 +15,11 @@ export interface RCVResult {
   unassigned: string[];
 }
 
-export function runRCV(votes: VoteRecord[], characterIds: string[]): RCVResult {
+export function runRCV(
+  votes: VoteRecord[],
+  characterIds: string[],
+  requiredCharIds: Set<string> = new Set()
+): RCVResult {
   const detectives = votes
     .filter((v) => v.wantsDetective)
     .map((v) => v.guestName);
@@ -97,6 +101,46 @@ export function runRCV(votes: VoteRecord[], characterIds: string[]): RCVResult {
 
       changed = true;
       break; // Restart after each conflict resolution
+    }
+  }
+
+  // Ensure required characters are assigned — bump guests to lower-ranked preferences if needed
+  const unassignedRequired = [...requiredCharIds].filter(
+    (c) => characterIds.includes(c) && !takenChars.has(c)
+  );
+
+  for (const reqChar of unassignedRequired) {
+    // Find the best swap candidate: an assigned guest (not on a required char)
+    // who ranked reqChar highest in their preferences
+    let bestGuest: string | null = null;
+    let bestRank = Infinity;
+
+    for (const voter of actingVoters) {
+      const currentAssignment = assignments.get(voter.guestName);
+      if (!currentAssignment) continue; // unassigned — handle in fallback
+      if (requiredCharIds.has(currentAssignment)) continue; // already on required char, don't disturb
+
+      const rankIdx = voter.rankings.indexOf(reqChar);
+      if (rankIdx !== -1 && rankIdx < bestRank) {
+        bestRank = rankIdx;
+        bestGuest = voter.guestName;
+      }
+    }
+
+    if (!bestGuest) {
+      // Nobody ranked this char; grab any guest not on a required char
+      bestGuest =
+        actingVoters.find((v) => {
+          const c = assignments.get(v.guestName);
+          return c && !requiredCharIds.has(c);
+        })?.guestName ?? null;
+    }
+
+    if (bestGuest) {
+      const oldChar = assignments.get(bestGuest)!;
+      takenChars.delete(oldChar); // free their current char for the fallback
+      assignments.set(bestGuest, reqChar);
+      takenChars.add(reqChar);
     }
   }
 

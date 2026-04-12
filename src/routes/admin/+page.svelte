@@ -336,6 +336,10 @@
     }
   }
 
+  async function toggleRequired(id: Id<"characters">, current: boolean | undefined) {
+    await client.mutation(api.characters.update, { id, required: !current });
+  }
+
   async function deleteCharacter(id: Id<"characters">) {
     if (!confirm("Delete this character?")) return;
     await client.mutation(api.characters.remove, { id });
@@ -380,13 +384,18 @@
     const filteredVotes = votes.filter((v) => !manualNames.has(v.guestName.toLowerCase()));
     const availableCharIds = characters.map((c) => c._id as string).filter((id) => !takenByManual.has(id));
 
+    const requiredCharIds = new Set(
+      characters.filter((c) => c.required && !takenByManual.has(c._id as string)).map((c) => c._id as string)
+    );
+
     const { assignments } = runRCV(
       filteredVotes.map((v) => ({
         guestName: v.guestName,
         rankings: v.rankings as string[],
         wantsDetective: v.wantsDetective,
       })),
-      availableCharIds
+      availableCharIds,
+      requiredCharIds
     );
     rcvResults = [...manualResults, ...assignments];
   }
@@ -706,9 +715,15 @@
                     <div class="char-row">
                       <div class="char-info">
                         <strong>{char.name}</strong>
+                        {#if char.required}<span class="required-badge">Required</span>{/if}
                         <p class="muted char-desc">{char.description}</p>
                       </div>
                       <div class="char-actions">
+                        <button
+                          class="btn {char.required ? 'btn-required-on' : 'btn-ghost'}"
+                          onclick={() => toggleRequired(char._id, char.required)}
+                          title={char.required ? "Remove required" : "Mark as required"}
+                        >{char.required ? "★ Required" : "☆ Required"}</button>
                         <button class="btn btn-ghost" onclick={() => startEditChar(char)}>Edit</button>
                         <button class="btn btn-danger" onclick={() => deleteCharacter(char._id)}>✕</button>
                       </div>
@@ -1397,7 +1412,32 @@
 
   .char-info { flex: 1; }
   .char-desc { margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--on-surface-muted); }
-  .char-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+  .char-actions { display: flex; gap: 0.4rem; flex-shrink: 0; align-items: center; }
+
+  .required-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    border-radius: 0.125rem;
+    padding: 0.1rem 0.4rem;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+  }
+
+  .btn-required-on {
+    background: var(--primary);
+    color: var(--on-primary, #000);
+    border: 1px solid var(--primary);
+    font-size: 0.8rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 0.125rem;
+    cursor: pointer;
+  }
+  .btn-required-on:hover { opacity: 0.85; }
 
   .char-edit {
     display: flex;

@@ -30,6 +30,7 @@ export const update = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     order: v.optional(v.number()),
+    required: v.optional(v.boolean()),
   },
   handler: async (ctx, { id, ...fields }) => {
     await ctx.db.patch(id, fields);

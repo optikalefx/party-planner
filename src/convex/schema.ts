@@ -48,6 +48,7 @@ export default defineSchema({
     name: v.string(),
     description: v.string(),
     order: v.number(),
+    required: v.optional(v.boolean()),
   }).index("by_party", ["partyId"]),
 
   votes: defineTable({
