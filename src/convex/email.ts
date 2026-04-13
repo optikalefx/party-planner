@@ -7,9 +7,9 @@ export const sendEmail = internalAction({
   args: {
     to: v.string(),
     subject: v.string(),
-    body: v.string(),
+    html: v.string(),
   },
-  handler: async (ctx, { to, subject, body }) => {
+  handler: async (ctx, { to, subject, html }) => {
     const apiKey = process.env.RESEND_API_KEY;
 
     if (!apiKey) {
@@ -17,7 +17,6 @@ export const sendEmail = internalAction({
       await ctx.runMutation(internal.emailLog.logEmail, {
         to,
         subject,
-        body,
         status: "skipped",
         error: "Resend API key not configured",
       });
@@ -35,7 +34,7 @@ export const sendEmail = internalAction({
           from: "hey@mysteryinvite.com",
           to,
           subject,
-          html: `<p>${body.replace(/\n/g, "<br>")}</p>`,
+          html,
         }),
       });
 
@@ -46,7 +45,6 @@ export const sendEmail = internalAction({
         await ctx.runMutation(internal.emailLog.logEmail, {
           to,
           subject,
-          body,
           status: "failed",
           error: data.message || `${response.status}: Unknown error`,
           resendId: undefined,
@@ -57,7 +55,6 @@ export const sendEmail = internalAction({
       await ctx.runMutation(internal.emailLog.logEmail, {
         to,
         subject,
-        body,
         status: "sent",
         resendId: data.id,
       });
@@ -66,7 +63,6 @@ export const sendEmail = internalAction({
       await ctx.runMutation(internal.emailLog.logEmail, {
         to,
         subject,
-        body,
         status: "failed",
         error: String(err),
       });

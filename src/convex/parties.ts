@@ -2,6 +2,10 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import {
+  buildCharacterAssignmentEmail,
+  buildReminderEmail,
+} from "./emailTemplate";
 
 function generateInviteCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -142,10 +146,20 @@ export const lockCharacters = mutation({
           const charName = characterId === "detective"
             ? "the Detective"
             : charById.get(characterId) ?? "your character";
+          const charDescription = characterId === "detective"
+            ? "You'll be observing and solving the mystery — no character to play, just your wits!"
+            : (characters.find((c) => c._id.toString() === characterId)?.description ?? "");
+          const partyUrl = `https://mysteryinvite.com/party/${party.inviteCode}`;
+          const html = buildCharacterAssignmentEmail(
+            party.name,
+            charName,
+            charDescription,
+            partyUrl
+          );
           await ctx.scheduler.runAfter(0, internal.email.sendEmail, {
             to: guest.email,
             subject: `Your character for ${party.name}`,
-            body: `Your character for ${party.name} has been revealed! You are ${charName}. Check the party page for details.`,
+            html,
           });
         }
       }
@@ -208,14 +222,21 @@ export const sendReminder = internalMutation({
     if (party.time) parts.push(`at ${party.time}`);
     if (party.location) parts.push(`- ${party.location}`);
 
-    const message = `Reminder: ${parts.join(" ")} is coming up! Don't forget to RSVP if you haven't already.`;
+    const partyUrl = `https://mysteryinvite.com/party/${party.inviteCode}`;
 
     for (const guest of guests) {
       if (guest.email) {
+        const html = buildReminderEmail(
+          party.name,
+          party.date ?? "",
+          party.time ?? "",
+          party.location ?? "",
+          partyUrl
+        );
         await ctx.scheduler.runAfter(0, internal.email.sendEmail, {
           to: guest.email,
           subject: `Reminder: ${party.name}`,
-          body: message,
+          html,
         });
       }
     }

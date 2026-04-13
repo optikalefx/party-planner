@@ -2,6 +2,10 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import {
+  buildMentionEmail,
+  buildHostMessageEmail,
+} from "./emailTemplate";
 
 export const listByParty = query({
   args: { partyId: v.id("parties") },
@@ -80,24 +84,28 @@ export const sendMessage = mutation({
       lowerBody.includes("@" + g.name.toLowerCase())
     );
 
+    const partyUrl = `https://mysteryinvite.com/party/${party.inviteCode}`;
+
     if (mentionedGuests.length > 0) {
       // Only notify mentioned guests
       for (const guest of mentionedGuests) {
         if (guest.name.toLowerCase() === authorName.toLowerCase()) continue;
+        const html = buildMentionEmail(authorName, partyName, trimmed, partyUrl);
         await ctx.scheduler.runAfter(0, internal.email.sendEmail, {
           to: guest.email!,
           subject: `${authorName} mentioned you in ${partyName}`,
-          body: `${authorName} mentioned you in ${partyName}: "${trimmed}"`,
+          html,
         });
       }
     } else if (isHost) {
       // Host message with no mentions -> notify everyone except the host
       for (const guest of guestsWithEmail) {
         if (guest.name.toLowerCase() === authorName.toLowerCase()) continue;
+        const html = buildHostMessageEmail(partyName, trimmed, partyUrl);
         await ctx.scheduler.runAfter(0, internal.email.sendEmail, {
           to: guest.email!,
-          subject: `${partyName} host message`,
-          body: `${partyName} host says: "${trimmed}"`,
+          subject: `Message from ${partyName}`,
+          html,
         });
       }
     } else {

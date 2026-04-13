@@ -76,7 +76,6 @@ export default defineSchema({
   emailMessages: defineTable({
     to: v.string(),
     subject: v.string(),
-    body: v.string(),
     status: v.string(),
     resendId: v.optional(v.string()),
     error: v.optional(v.string()),
