@@ -72,11 +72,11 @@ export const sendMessage = mutation({
       .withIndex("by_party", (q) => q.eq("partyId", partyId))
       .collect();
 
-    const guestsWithPhone = guests.filter((g) => g.phoneNumber);
+    const guestsWithEmail = guests.filter((g) => g.email);
 
     // Match @mentions against known guest names
     const lowerBody = trimmed.toLowerCase();
-    const mentionedGuests = guestsWithPhone.filter((g) =>
+    const mentionedGuests = guestsWithEmail.filter((g) =>
       lowerBody.includes("@" + g.name.toLowerCase())
     );
 
@@ -84,17 +84,19 @@ export const sendMessage = mutation({
       // Only notify mentioned guests
       for (const guest of mentionedGuests) {
         if (guest.name.toLowerCase() === authorName.toLowerCase()) continue;
-        await ctx.scheduler.runAfter(0, internal.twilio.sendSms, {
-          to: guest.phoneNumber!,
+        await ctx.scheduler.runAfter(0, internal.email.sendEmail, {
+          to: guest.email!,
+          subject: `${authorName} mentioned you in ${partyName}`,
           body: `${authorName} mentioned you in ${partyName}: "${trimmed}"`,
         });
       }
     } else if (isHost) {
       // Host message with no mentions -> notify everyone except the host
-      for (const guest of guestsWithPhone) {
+      for (const guest of guestsWithEmail) {
         if (guest.name.toLowerCase() === authorName.toLowerCase()) continue;
-        await ctx.scheduler.runAfter(0, internal.twilio.sendSms, {
-          to: guest.phoneNumber!,
+        await ctx.scheduler.runAfter(0, internal.email.sendEmail, {
+          to: guest.email!,
+          subject: `${partyName} host message`,
           body: `${partyName} host says: "${trimmed}"`,
         });
       }

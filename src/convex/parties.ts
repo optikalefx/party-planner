@@ -137,13 +137,14 @@ export const lockCharacters = mutation({
       if (guest && characterId !== "unassigned") {
         await ctx.db.patch(guest._id, { assignedCharacterId: characterId });
 
-        // Notify guest of their character assignment via SMS
-        if (guest.phoneNumber) {
+        // Notify guest of their character assignment via email
+        if (guest.email) {
           const charName = characterId === "detective"
             ? "the Detective"
             : charById.get(characterId) ?? "your character";
-          await ctx.scheduler.runAfter(0, internal.twilio.sendSms, {
-            to: guest.phoneNumber,
+          await ctx.scheduler.runAfter(0, internal.email.sendEmail, {
+            to: guest.email,
+            subject: `Your character for ${party.name}`,
             body: `Your character for ${party.name} has been revealed! You are ${charName}. Check the party page for details.`,
           });
         }
@@ -210,9 +211,10 @@ export const sendReminder = internalMutation({
     const message = `Reminder: ${parts.join(" ")} is coming up! Don't forget to RSVP if you haven't already.`;
 
     for (const guest of guests) {
-      if (guest.phoneNumber) {
-        await ctx.scheduler.runAfter(0, internal.twilio.sendSms, {
-          to: guest.phoneNumber,
+      if (guest.email) {
+        await ctx.scheduler.runAfter(0, internal.email.sendEmail, {
+          to: guest.email,
+          subject: `Reminder: ${party.name}`,
           body: message,
         });
       }

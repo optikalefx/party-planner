@@ -86,7 +86,7 @@
 
   // ── RSVP ─────────────────────────────────────────────────────────────────────
   let rsvpStatus = $state<"yes" | "no" | "pending">("pending");
-  let phoneNumber = $state("");
+  let email = $state("");
   let rsvpSaving = $state(false);
   let rsvpDone = $state(false);
 
@@ -97,7 +97,7 @@
   $effect(() => {
     if (myGuest) {
       rsvpStatus = myGuest.rsvpStatus;
-      phoneNumber = myGuest.phoneNumber ?? "";
+      email = myGuest.email ?? "";
       rsvpDone = myGuest.rsvpStatus !== "pending";
     }
   });
@@ -110,7 +110,7 @@
         partyId,
         name: identifiedName,
         rsvpStatus,
-        phoneNumber: phoneNumber.trim() || undefined,
+        email: email.trim() || undefined,
       });
       rsvpDone = true;
     } finally {
@@ -630,15 +630,15 @@
             <p class="rsvp-greeting">Hi, <strong>{identifiedName}</strong>! <button class="btn-link" onclick={() => { identifiedName = null; guestName = ""; }}>Not you?</button></p>
 
             <div class="form-group" style="margin-bottom: 1rem;">
-              <label class="party-label" for="phone-number">Phone Number <span style="font-weight: normal; opacity: 0.7;">(optional)</span></label>
+              <label class="party-label" for="email">Email <span style="font-weight: normal; opacity: 0.7;">(optional, but required for notifications)</span></label>
               <input
-                id="phone-number"
+                id="email"
                 class="party-input"
-                type="tel"
-                bind:value={phoneNumber}
-                placeholder="+1 (555) 123-4567"
+                type="email"
+                bind:value={email}
+                placeholder="your@email.com"
               />
-              <p class="party-muted" style="font-size: 0.8rem; margin-top: 0.25rem;">For party notifications only. We won't share your number.</p>
+              <p class="party-muted" style="font-size: 0.8rem; margin-top: 0.25rem;">We'll send you party updates and notifications. We won't share your email.</p>
             </div>
 
             <div class="rsvp-options">

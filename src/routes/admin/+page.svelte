@@ -838,7 +838,7 @@
               <table class="guest-table">
                 <colgroup>
                   <col class="col-name" />
-                  <col class="col-phone" />
+                  <col class="col-email" />
                   <col class="col-rsvp" />
                   <col class="col-char" />
                   <col class="col-action" />
@@ -846,7 +846,7 @@
                 <thead>
                   <tr>
                     <th>Name</th>
-                    <th>Phone</th>
+                    <th>Email</th>
                     <th>RSVP</th>
                     <th>Character</th>
                     <th></th>
@@ -860,15 +860,15 @@
                       </td>
                       <td>
                         <input
-                          class="phone-input"
-                          type="tel"
-                          value={guest.phoneNumber ?? ""}
+                          class="email-input"
+                          type="email"
+                          value={guest.email ?? ""}
                           placeholder="—"
                           onchange={(e) => {
                             const val = (e.target as HTMLInputElement).value.trim();
-                            client.mutation(api.guests.updatePhone, {
+                            client.mutation(api.guests.updateEmail, {
                               id: guest._id,
-                              phoneNumber: val || undefined,
+                              email: val || undefined,
                             });
                           }}
                         />
@@ -1497,7 +1497,7 @@
   .guest-table thead th:last-child { padding-right: 0; text-align: center; }
 
   .guest-table col.col-name { width: auto; }
-  .guest-table col.col-phone { width: 140px; }
+  .guest-table col.col-email { width: 200px; }
   .guest-table col.col-rsvp { width: 52px; }
   .guest-table col.col-char { width: 35%; }
   .guest-table col.col-action { width: 32px; }
@@ -1520,7 +1520,7 @@
 
   .guest-name-cell { font-weight: 600; white-space: nowrap; }
 
-  .phone-input {
+  .email-input {
     background: transparent;
     border: 1px solid rgba(201, 169, 110, 0.1);
     border-radius: 2px;
@@ -1531,12 +1531,12 @@
     width: 100%;
     box-sizing: border-box;
   }
-  .phone-input:focus {
+  .email-input:focus {
     outline: none;
     border-color: var(--secondary);
     background: rgba(245, 240, 232, 0.07);
   }
-  .phone-input::placeholder { color: var(--on-surface-faint); }
+  .email-input::placeholder { color: var(--on-surface-faint); }
 
   .assign-select {
     background: rgba(245, 240, 232, 0.07);

@@ -39,7 +39,7 @@ export default defineSchema({
     partyId: v.id("parties"),
     name: v.string(),
     rsvpStatus: v.union(v.literal("yes"), v.literal("no"), v.literal("pending")),
-    phoneNumber: v.optional(v.string()),
+    email: v.optional(v.string()),
     assignedCharacterId: v.optional(v.string()), // character ID or "detective"; bypasses voting
   }).index("by_party", ["partyId"]),
 
@@ -73,12 +73,12 @@ export default defineSchema({
   }).index("by_party", ["partyId"])
     .index("by_message", ["messageId"]),
 
-  smsMessages: defineTable({
+  emailMessages: defineTable({
     to: v.string(),
+    subject: v.string(),
     body: v.string(),
     status: v.string(),
-    twilioSid: v.optional(v.string()),
-    twilioError: v.optional(v.string()),
-    twilioErrorCode: v.optional(v.string()),
+    resendId: v.optional(v.string()),
+    error: v.optional(v.string()),
   }),
 });

@@ -16,9 +16,9 @@ export const upsertRsvp = mutation({
     partyId: v.id("parties"),
     name: v.string(),
     rsvpStatus: v.union(v.literal("yes"), v.literal("no"), v.literal("pending")),
-    phoneNumber: v.optional(v.string()),
+    email: v.optional(v.string()),
   },
-  handler: async (ctx, { partyId, name, rsvpStatus, phoneNumber }) => {
+  handler: async (ctx, { partyId, name, rsvpStatus, email }) => {
     const existing = await ctx.db
       .query("guests")
       .withIndex("by_party", (q) => q.eq("partyId", partyId))
@@ -26,10 +26,10 @@ export const upsertRsvp = mutation({
       .unique();
 
     if (existing) {
-      await ctx.db.patch(existing._id, { rsvpStatus, phoneNumber });
+      await ctx.db.patch(existing._id, { rsvpStatus, email });
       return existing._id;
     } else {
-      return await ctx.db.insert("guests", { partyId, name, rsvpStatus, phoneNumber });
+      return await ctx.db.insert("guests", { partyId, name, rsvpStatus, email });
     }
   },
 });
@@ -41,13 +41,13 @@ export const remove = mutation({
   },
 });
 
-export const updatePhone = mutation({
+export const updateEmail = mutation({
   args: {
     id: v.id("guests"),
-    phoneNumber: v.optional(v.string()),
+    email: v.optional(v.string()),
   },
-  handler: async (ctx, { id, phoneNumber }) => {
-    await ctx.db.patch(id, { phoneNumber });
+  handler: async (ctx, { id, email }) => {
+    await ctx.db.patch(id, { email });
   },
 });
 
