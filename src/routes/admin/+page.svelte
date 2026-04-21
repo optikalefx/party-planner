@@ -5,6 +5,7 @@
   import { runRCV } from "$lib/rcv";
   import { goto } from "$app/navigation";
   import { auth, signOut } from "$lib/auth.svelte";
+  import { Toaster, toast } from "svelte-sonner";
   const userQuery = useQuery(api.users.getCurrent, {});
 
   $effect(() => {
@@ -20,7 +21,6 @@
   let view = $state<"parties" | "detail">("parties");
   let activeTab = $state<"details" | "characters" | "theme" | "guests" | "voting">("details");
   let saving = $state(false);
-  let status = $state("");
 
   // Party form
   let form = $state({
@@ -49,6 +49,7 @@
 
   // Guest form
   let guestForm = $state({ name: "", rsvpStatus: "yes" as "yes" | "no" | "pending" });
+  let savingGuestEmail = $state<string | null>(null);
 
   // Reminder (defaults: 3 days before at 8pm)
   let reminderDays = $state(3);
@@ -96,9 +97,14 @@
   const rsvpNo = $derived(guests.filter((g) => g.rsvpStatus === "no"));
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
-  function flash(msg: string) {
-    status = msg;
-    setTimeout(() => (status = ""), 3000);
+  function flash(msg: string, type: "success" | "error" | "info" = "success") {
+    if (type === "error") {
+      toast.error(msg);
+    } else if (type === "info") {
+      toast.info(msg);
+    } else {
+      toast.success(msg);
+    }
   }
 
   function selectParty(id: Id<"parties">) {
@@ -171,11 +177,11 @@
     if (!selectedPartyId) return;
     const scheduledAtMs = computeReminderMs();
     if (!scheduledAtMs) {
-      flash("Set a party date before scheduling a reminder.");
+      flash("Set a party date before scheduling a reminder.", "info");
       return;
     }
     if (scheduledAtMs <= Date.now()) {
-      flash("Reminder time is in the past. Adjust the days or time.");
+      flash("Reminder time is in the past. Adjust the days or time.", "info");
       return;
     }
     reminderSaving = true;
@@ -188,7 +194,7 @@
       });
       flash("Reminder scheduled!");
     } catch (e) {
-      flash("Error scheduling reminder: " + (e as Error).message);
+      flash("Error scheduling reminder: " + (e as Error).message, "error");
     } finally {
       reminderSaving = false;
     }
@@ -201,7 +207,7 @@
       await client.mutation(api.parties.cancelReminder, { id: selectedPartyId });
       flash("Reminder cancelled.");
     } catch (e) {
-      flash("Error cancelling reminder: " + (e as Error).message);
+      flash("Error cancelling reminder: " + (e as Error).message, "error");
     } finally {
       reminderSaving = false;
     }
@@ -246,7 +252,7 @@
       inviteFile = null;
       flash("Invite parsed and saved!");
     } catch (e) {
-      flash("Error parsing invite: " + (e as Error).message);
+      flash("Error parsing invite: " + (e as Error).message, "error");
     } finally {
       parsingInvite = false;
     }
@@ -282,7 +288,7 @@
       });
       flash("Theme generated!");
     } catch (e) {
-      flash("Error generating theme: " + (e as Error).message);
+      flash("Error generating theme: " + (e as Error).message, "error");
     } finally {
       generatingTheme = false;
     }
@@ -330,7 +336,7 @@
       charImportImageFile = null;
       flash(`Imported ${parsed.length} characters!`);
     } catch (e) {
-      flash("Error parsing characters: " + (e as Error).message);
+      flash("Error parsing characters: " + (e as Error).message, "error");
     } finally {
       parsingCharacters = false;
     }
@@ -451,9 +457,6 @@
     </div>
   </header>
 
-  {#if status}
-    <div class="flash">{status}</div>
-  {/if}
 
   <!-- ── Party List ─────────────────────────────────────────────────────────── -->
   {#if view === "parties"}
@@ -864,11 +867,20 @@
                           type="email"
                           value={guest.email ?? ""}
                           placeholder="—"
+                          disabled={savingGuestEmail === guest._id}
                           onchange={(e) => {
                             const val = (e.target as HTMLInputElement).value.trim();
+                            savingGuestEmail = guest._id;
                             client.mutation(api.guests.updateEmail, {
                               id: guest._id,
                               email: val || undefined,
+                            }).then(() => {
+                              flash("Email saved");
+                            }).catch((err) => {
+                              console.error("Email save error:", err);
+                              flash("Error saving email", "error");
+                            }).finally(() => {
+                              savingGuestEmail = null;
                             });
                           }}
                         />
@@ -1000,6 +1012,8 @@
 
     </div>
   {/if}
+
+  <Toaster />
 </div>
 
 <style>
@@ -1073,17 +1087,6 @@
     height: 30px;
     border-radius: 50%;
     object-fit: cover;
-  }
-
-  .flash {
-    background: var(--surface-container);
-    color: var(--secondary-light);
-    padding: 0.75rem 1rem;
-    border-radius: 0.125rem;
-    margin-bottom: 1.25rem;
-    font-weight: 500;
-    font-size: 0.875rem;
-    border-left: 2px solid var(--secondary);
   }
 
   /* ── Party list section ── */

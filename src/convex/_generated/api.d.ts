@@ -11,6 +11,9 @@
 import type * as auth from "../auth.js";
 import type * as characters from "../characters.js";
 import type * as chat from "../chat.js";
+import type * as email from "../email.js";
+import type * as emailLog from "../emailLog.js";
+import type * as emailTemplate from "../emailTemplate.js";
 import type * as generateTheme from "../generateTheme.js";
 import type * as guests from "../guests.js";
 import type * as http from "../http.js";
@@ -18,9 +21,7 @@ import type * as lib_claude from "../lib/claude.js";
 import type * as parseCharacters from "../parseCharacters.js";
 import type * as parseInvite from "../parseInvite.js";
 import type * as parties from "../parties.js";
-import type * as smsLog from "../smsLog.js";
 import type * as storage from "../storage.js";
-import type * as twilio from "../twilio.js";
 import type * as users from "../users.js";
 import type * as votes from "../votes.js";
 
@@ -34,6 +35,9 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   characters: typeof characters;
   chat: typeof chat;
+  email: typeof email;
+  emailLog: typeof emailLog;
+  emailTemplate: typeof emailTemplate;
   generateTheme: typeof generateTheme;
   guests: typeof guests;
   http: typeof http;
@@ -41,9 +45,7 @@ declare const fullApi: ApiFromModules<{
   parseCharacters: typeof parseCharacters;
   parseInvite: typeof parseInvite;
   parties: typeof parties;
-  smsLog: typeof smsLog;
   storage: typeof storage;
-  twilio: typeof twilio;
   users: typeof users;
   votes: typeof votes;
 }>;

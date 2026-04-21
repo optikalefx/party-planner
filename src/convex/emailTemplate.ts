@@ -56,6 +56,13 @@ export function buildEmailHTML(options: EmailOptions): string {
       margin: 0 auto 20px;
       display: block;
     }
+    .footer-logo {
+      width: 24px;
+      height: 24px;
+      margin: 0 8px 0 0;
+      display: inline-block;
+      vertical-align: middle;
+    }
     .title {
       font-size: 28px;
       font-weight: 700;
@@ -153,7 +160,7 @@ export function buildEmailHTML(options: EmailOptions): string {
         : ""}
     </div>
     <div class="footer">
-      <p style="margin: 0;">🎭 Mystery Invite</p>
+      <p style="margin: 0;"><img src="https://mysteryinvite.com/logo.png" alt="Mystery Invite" class="footer-logo" /> Mystery Invite</p>
       <p style="margin: 4px 0 0 0;">Plan. Investigate. Solve.</p>
     </div>
   </div>
